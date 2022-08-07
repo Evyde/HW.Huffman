@@ -35,7 +35,7 @@ The file compressed will be end of .huff, which contains header like below:
 ```
 
 In this:
-- Magic Number: A magic number, it is always be 0x01711EF3, 0b0001 0111 0001 0001 1110 1111 0011.
+- Magic Number: A magic number, it is always 0x01711EF3, 0b0001 0111 0001 0001 1110 1111 0011.
 - Version Number: A version number of this huff file, now it should be 0b0000 0001, which is 1.
 - Trie Length: The length of huffman trie structure.
 - Source Length: The length of file of the uncompressed, the full file. 
