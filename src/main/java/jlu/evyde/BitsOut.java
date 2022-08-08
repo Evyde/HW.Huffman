@@ -11,7 +11,7 @@ public class BitsOut {
     private int pointer = 0;
 
     public BitsOut() {
-        this.stream = new BufferedOutputStream(System.out);
+        this(System.out);
     }
 
     public BitsOut(String filename) {
@@ -92,10 +92,26 @@ public class BitsOut {
         this.writeBit(b);
     }
 
-    public void close() {
+    public void write(int b, int n) {
+        while (n > 0) {
+            this.writeBit(((b >>> (n - 1)) & 1) == 1);
+            n--;
+        }
+    }
+
+    public void flush() {
         this.clearBuffer();
         try {
             this.stream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void close() {
+        flush();
+        try {
+            this.stream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
