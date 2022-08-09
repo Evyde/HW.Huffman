@@ -1,6 +1,7 @@
 package jlu.evyde;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 public class BitsIn {
@@ -20,21 +21,23 @@ public class BitsIn {
         this(new File(filename));
     }
 
-    public BitsIn(String workingDirectory, String filename) {
-        this(workingDirectory + filename);
+    public BitsIn(String... filename) {
+        this(Utils.join(filename));
     }
 
     public BitsIn(File file) {
         try {
-            this.stream = new BufferedInputStream(new FileInputStream(file));
+            FileInputStream temp = new FileInputStream(file);
+            temp.mark(Integer.MAX_VALUE);
+            this.stream = new BufferedInputStream(temp);
         } catch (IOException e) {
             e.printStackTrace();
-            this.stream = new BufferedInputStream(System.in);
         }
     }
 
     public BitsIn(InputStream inputStream) {
         this.stream = new BufferedInputStream(inputStream);
+        this.stream.mark(Integer.MAX_VALUE);
         fillBuffer();
     }
 
@@ -108,6 +111,14 @@ public class BitsIn {
             e.printStackTrace();
             buffer = EOF;
             this.pointer = EOF;
+        }
+    }
+
+    public void reset() {
+        try {
+            this.stream.reset();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

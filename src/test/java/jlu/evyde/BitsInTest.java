@@ -63,4 +63,22 @@ public class BitsInTest {
         assertArrayEquals(bi2.readBits(17), bi1.readBits(17));
         assertArrayEquals(bi2.readBits(6), bi1.readBits(6));
     }
+
+    @Test
+    public void resetTest() {
+        byte[] expectArray = new byte[]{0b001, 0b101, 0b111, 0b101};
+
+        BitsIn bi1 = new BitsIn(new ByteArrayInputStream(expectArray));
+        BitsIn bi2 = new BitsIn(new ByteArrayInputStream(expectArray));
+
+        assertArrayEquals(bi2.readBits(8), bi1.readBits(8));
+        assertArrayEquals(bi2.readBits(17), bi1.readBits(17));
+        assertArrayEquals(bi2.readBits(6), bi1.readBits(6));
+
+        bi1.reset();
+        bi2.reset();
+        assertArrayEquals(bi2.readBits(8), bi1.readBits(8));
+        assertArrayEquals(bi2.readBits(17), bi1.readBits(17));
+        assertArrayEquals(bi2.readBits(6), bi1.readBits(6));
+    }
 }

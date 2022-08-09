@@ -18,8 +18,8 @@ public class BitsOut {
         this(new File(filename));
     }
 
-    public BitsOut(String workingDirectory, String filename) {
-        this(workingDirectory + filename);
+    public BitsOut(String... filename) {
+        this(Utils.join(filename));
     }
 
     public BitsOut(File file) {
@@ -46,7 +46,7 @@ public class BitsOut {
         }
     }
 
-    private void writeByte(int b) {
+    private void writeByte(byte b) {
         try {
             // empty buffer just write it
             if (this.pointer == 0) {
@@ -78,14 +78,14 @@ public class BitsOut {
     }
 
     public void write(byte b) {
-        this.writeByte(b & 0xff);
+        this.writeByte((byte) (b & 0xff));
     }
 
     public void write(int b) {
-        this.writeByte((b >>> 24) & 0xff);
-        this.writeByte((b >>> 16) & 0xff);
-        this.writeByte((b >>> 8) & 0xff);
-        this.writeByte((b >>> 0) & 0xff);
+        this.writeByte((byte) ((b >>> 24) & 0xff));
+        this.writeByte((byte) ((b >>> 16) & 0xff));
+        this.writeByte((byte) ((b >>> 8) & 0xff));
+        this.writeByte((byte) ((b >>> 0) & 0xff));
     }
 
     public void write(boolean b) {
