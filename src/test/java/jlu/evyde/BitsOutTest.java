@@ -73,4 +73,20 @@ public class BitsOutTest {
 
         assertEquals(expect, new BigInteger(1, actual.toByteArray()).toString(2));
     }
+
+    @Test
+    public void write3BitsBits() {
+        int[] expectArray = new int[]{0b111, 0b110, 0b101, 0b011, 0b000, 0b010, 0b001, 0b001, 0b000, 0b111};
+        ByteArrayOutputStream actual = new ByteArrayOutputStream();
+        String expect = "11111010101100001000100100011100";
+        BitsOut bo = new BitsOut(actual);
+
+        for (int i: expectArray) {
+            bo.write(new Bits(i, 3));
+        }
+
+        bo.close();
+
+        assertEquals(expect, new BigInteger(1, actual.toByteArray()).toString(2));
+    }
 }

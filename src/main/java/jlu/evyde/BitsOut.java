@@ -99,6 +99,16 @@ public class BitsOut {
         }
     }
 
+    public void write(Boolean[] bits) {
+        for (boolean b: bits) {
+            this.write(b);
+        }
+    }
+
+    public void write(Bits bits) {
+        this.write(bits.getBitsArray());
+    }
+
     public void flush() {
         this.clearBuffer();
         try {

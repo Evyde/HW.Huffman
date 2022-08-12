@@ -1,7 +1,6 @@
 package jlu.evyde;
 
 import java.io.*;
-import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 public class BitsIn {
@@ -64,12 +63,17 @@ public class BitsIn {
         return returnByte;
     }
 
-    public int read() {
+    @Deprecated
+    public int readInt() {
         // read an 32-bit int
-        return read(32);
+        return readInt(32);
     }
 
-    public boolean[] readBits(int n) {
+    public Bits readBits(int n) {
+        return new Bits(readBooleanBits(n));
+    }
+
+    public boolean[] readBooleanBits(int n) {
         boolean[] returnBits = new boolean[n];
         for (int i = 0; i < n; i++) {
             returnBits[i] = readBit();
@@ -77,7 +81,12 @@ public class BitsIn {
         return returnBits;
     }
 
-    public int read(int n) {
+    public Bits read(int n) {
+        return readBits(n);
+    }
+
+    @Deprecated
+    public int readInt(int n) {
         int returnInt = 0;
         for (int i = 0; i < n; i++) {
             returnInt <<= 1;
