@@ -5,11 +5,18 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.zip.CRC32;
 
 public class Huffman {
+
+    public class Node {
+
+    }
+
     public class Header {
-        public static final int MAGIC_NUMBER = 0x01711EF3;
-        public static final byte VERSION = 1;
+        public static final Bits MAGIC_NUMBER = new Bits(0x01711EF3, 32);
+        public static final Bits VERSION = new Bits(1, 8);
         private byte type;
         private int trieLength;
         private BigInteger sourceLength;
@@ -28,8 +35,9 @@ public class Huffman {
         public static boolean isValidHeader(BitsIn inStream) {
             // try reading first 32 bits -- an integer
             // and the version number is supported
-            boolean result = (inStream.read() == MAGIC_NUMBER) && (inStream.readByte() <= VERSION);
-            inStream.reset();
+            // TODO: Change this stupid readInt into Bits read()
+            boolean result = (inStream.read(32).equals(MAGIC_NUMBER)) && (inStream.read(8).compareTo(VERSION) <= 0);
+            // inStream.reset();
             return result;
         }
 
@@ -49,43 +57,34 @@ public class Huffman {
             return CRC32Code;
         }
 
-        public Byte[] dump() {
-            List<Byte> header = new ArrayList<>();
-            for (Byte b: Utils.intToByteArray(MAGIC_NUMBER)) {
-                header.add(b);
-            }
+        public List<Bits> dump() {
+            List<Bits> header = new ArrayList<>();
+            header.add(MAGIC_NUMBER);
             header.add(VERSION);
-            header.add(getType());
-            for (Byte b: Utils.intToByteArray(getTrieLength(), 2)) {
-                header.add(b);
-            }
+            header.add(new Bits((byte) 1));
+            header.add(new Bits(37890, 16));
 
-            for (Byte b: Utils.longToByteArray(getSourceLength().longValue())) {
-                header.add(b);
-            }
+            header.add(new Bits(new BigInteger("123456789101112"), 64));
 
-            for (Byte b: Utils.intToByteArray(getCRC32Code())) {
-                header.add(b);
-            }
+            CRC32 temp = new CRC32();
+            temp.update(new BigInteger("123456789101112").toByteArray());
+            header.add(new Bits(temp.getValue(), 32));
 
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    header.add((byte) 0);
-                }
-            }
-            return (Byte[]) header.toArray();
+            header.add(new Bits(0, 128));
+            return header;
         }
     }
 
-    private Header header;
+    private final Header header;
 
     private Huffman(BitsIn in) {
         if (Header.isValidHeader(in)) {
             this.header = new Header(in);
-            // create Huffman trie from file
+            // read Huffman trie from given file
+
         } else {
             this.header = new Header("");
-            // create Huffman trie and do statistics
+            // create Huffman trie from file and do statistics
         }
     }
 
@@ -105,9 +104,11 @@ public class Huffman {
     }
 
     private void compress(BitsOut out) {
-        for (byte h: header.dump()) {
-            out.write(h);
+        for (Bits b: header.dump()) {
+            out.write(b);
         }
+        out.flush();
+        out.close();
     }
 
     public void auto(String... outputFilename) {
@@ -115,7 +116,7 @@ public class Huffman {
     }
 
     public void auto(File outputFile) {
-
+        compress(new BitsOut(outputFile));
     }
 
 }

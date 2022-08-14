@@ -1,5 +1,7 @@
 package jlu.evyde;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.util.*;
 
 public class Main {
@@ -71,27 +73,17 @@ public class Main {
         System.out.println("Would read from " + (optionDashI? "standard input": inputFilename)
                 + " and write out to " + (optionDashO? "standard output": outputFilename) + ".");
 
+        // TODO: Remove this test stuff.
 
-        // TODO: Turn these stackoverflow-like code to a independent class named "ProgressBar"
-        char[] animationChars = new char[]{'|', '/', '-', '\\'};
+        new Huffman(inputFilename).auto(outputFilename);
 
-        for (int i = 0; i <= 100; i++) {
-            System.out.print("Processing: [");
-            for (int j = 0; j < i; j++) {
-                System.out.print("#");
+        ProgressBar.initialize("1000");
+        for (int i = 0; i <= 1000; i+= 10) {
+            for (int j = 0; j <= 1000000; j++) {
+                System.out.println("?");
             }
+            ProgressBar.add(i);
 
-            for (int j = i; j < 100; j++) {
-                System.out.print(" ");
-            }
-
-            System.out.print("] " + i + "% " + animationChars[i % 4] + "\r");
-
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
 
         System.out.println("Processing: Done!");
