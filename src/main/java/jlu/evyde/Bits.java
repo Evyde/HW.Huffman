@@ -1,11 +1,12 @@
 package jlu.evyde;
 
 import java.math.BigInteger;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 
-public class Bits {
-    private final List<Boolean> bits = new LinkedList<>();
+public class Bits implements Comparable<Bits> {
+    private final Deque<Boolean> bits = new LinkedList<>();
     private final int length;
 
     public Bits(String bitsInString) {
@@ -26,7 +27,7 @@ public class Bits {
             } else if (ch == '0') {
                 this.bits.add(false);
             } else {
-                throw new ArrayStoreException();
+                throw new NumberFormatException();
             }
         }
         this.length = bitLength;
@@ -58,9 +59,22 @@ public class Bits {
     }
 
     public Bits(int bitsInInt, int bitsLength) {
-        assert bitsLength <= 32 && bitsLength >= 0;
+        assert bitsLength >= 0;
         for (int i = 0; i < bitsLength; i++) {
             boolean bit = ((bitsInInt >> (bitsLength - i - 1)) & 1) == 1;
+            this.bits.add(bit);
+        }
+        this.length = bitsLength;
+    }
+
+    public Bits(long bitsInLong) {
+        this(bitsInLong, 64);
+    }
+
+    public Bits(long bitsInLong, int bitsLength) {
+        assert bitsLength >= 0;
+        for (int i = 0; i < bitsLength; i++) {
+            boolean bit = ((bitsInLong >> (bitsLength - i - 1)) & 1) == 1;
             this.bits.add(bit);
         }
         this.length = bitsLength;
@@ -81,8 +95,8 @@ public class Bits {
         return length;
     }
 
-    public List<Boolean> getBitsList() {
-        return bits;
+    public Deque<Boolean> getBitsQueue() {
+        return new LinkedList<>(bits);
     }
 
     public Boolean[] getBitsArray() {
@@ -105,13 +119,77 @@ public class Bits {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Bits bits1)) return false;
-        // TODO: Fix this equal problem (or not)
-        return this.bits.equals(bits1.bits);
+        if (o instanceof Bits) {
+            return isEqual(this, (Bits) o);
+        } else if (o instanceof BigInteger) {
+            return isEqual(this, new Bits((BigInteger) o));
+        } else if (o instanceof String) {
+            return isEqual(this, new Bits((String) o));
+        } else if (o instanceof Integer) {
+            return isEqual(this, new Bits((Integer) o));
+        } else if (o instanceof Byte) {
+            return isEqual(this, new Bits((Byte) o));
+        } else {
+            return false;
+        }
     }
 
     @Override
     public int hashCode() {
         return this.bits.hashCode();
+    }
+
+    private static boolean isEqual(Bits me, Bits other) {
+        boolean isEqual;
+        // expand with 0 in shorter thing
+        if ((other.getLength() != me.getLength())) {
+            Bits shorter = other.getLength() > me.getLength() ? me : other;
+            int diff = Math.abs(other.getLength() - me.getLength());
+            for (int i = 0; i < diff; i++) {
+                shorter.bits.addFirst(false);
+            }
+            isEqual = me.bits.equals(shorter.bits);
+            for (int i = 0; i < diff; i++) {
+                shorter.bits.removeFirst();
+            }
+        } else {
+            isEqual = me.bits.equals(other.bits);
+        }
+        return isEqual;
+    }
+
+    private static int compare(Bits me, Bits other) {
+        if (isEqual(me, other)) {
+            return 0;
+        }
+
+        int highestBit = 0, tempBits = 0;
+        Deque<Boolean> meDeque = me.getBitsQueue();
+        while (!meDeque.isEmpty()) {
+            if (meDeque.removeLast()) {
+                highestBit += tempBits;
+                tempBits = 0;
+            }
+            tempBits++;
+        }
+
+        tempBits = 0;
+
+        // check other
+        Deque<Boolean> otherDeque = other.getBitsQueue();
+        while (!otherDeque.isEmpty()) {
+            if (otherDeque.removeLast()) {
+                highestBit -= tempBits;
+                tempBits = 0;
+            }
+            tempBits++;
+        }
+
+        return highestBit > 0? 1: -1;
+    }
+
+    @Override
+    public int compareTo(Bits o) {
+        return compare(this, o);
     }
 }
