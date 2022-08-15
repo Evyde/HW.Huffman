@@ -69,6 +69,7 @@ public class BitsIn {
         return readInt(32);
     }
 
+    @Deprecated
     public Bits readBits(int n) {
         return new Bits(readBooleanBits(n));
     }
