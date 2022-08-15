@@ -10,8 +10,36 @@ import java.util.zip.CRC32;
 
 public class Huffman {
 
-    public class Node {
+    public class Node implements Comparable<Node> {
+        private BigInteger appearTimes;
+        private final Bits feature;
+        private final Node left;
+        private final Node right;
 
+        public Node(Bits feature, Node left, Node right) {
+            this.appearTimes = new BigInteger("0");
+            this.feature = feature;
+            this.left = left;
+            this.right = right;
+        }
+
+        public void timesPlusOne() {
+            this.updateTimes(this.appearTimes.add(new BigInteger("1")));
+        }
+
+        public void updateTimes(BigInteger newTimes) {
+            this.appearTimes = newTimes;
+        }
+
+        public boolean isLeaf() {
+            assert ((left == null) && (right == null)) || ((left != null) && (right != null));
+            return (left == null) && (right == null);
+        }
+
+        @Override
+        public int compareTo(Node node) {
+            return  this.appearTimes.subtract(node.appearTimes).compareTo(new BigInteger("0"));
+        }
     }
 
     public class Header {
@@ -35,10 +63,7 @@ public class Huffman {
         public static boolean isValidHeader(BitsIn inStream) {
             // try reading first 32 bits -- an integer
             // and the version number is supported
-            // TODO: Change this stupid readInt into Bits read()
-            boolean result = (inStream.read(32).equals(MAGIC_NUMBER)) && (inStream.read(8).compareTo(VERSION) <= 0);
-            // inStream.reset();
-            return result;
+            return (inStream.read(32).equals(MAGIC_NUMBER)) && (inStream.read(8).compareTo(VERSION) <= 0);
         }
 
         public BigInteger getSourceLength() {
@@ -61,10 +86,10 @@ public class Huffman {
             List<Bits> header = new ArrayList<>();
             header.add(MAGIC_NUMBER);
             header.add(VERSION);
-            header.add(new Bits((byte) 1));
-            header.add(new Bits(37890, 16));
+            header.add(new Bits(getType()));
+            header.add(new Bits(getTrieLength(), 16));
 
-            header.add(new Bits(new BigInteger("123456789101112"), 64));
+            header.add(new Bits(getSourceLength(), 64));
 
             CRC32 temp = new CRC32();
             temp.update(new BigInteger("123456789101112").toByteArray());
@@ -77,7 +102,10 @@ public class Huffman {
 
     private final Header header;
 
-    private Huffman(BitsIn in) {
+    private final boolean detail;
+
+    private Huffman(BitsIn in, BitsOut out, boolean details) {
+        this.detail = details;
         if (Header.isValidHeader(in)) {
             this.header = new Header(in);
             // read Huffman trie from given file
@@ -85,23 +113,18 @@ public class Huffman {
         } else {
             this.header = new Header("");
             // create Huffman trie from file and do statistics
+
+            compress(out);
         }
     }
 
-    public Huffman(String... filename) {
-        this(new BitsIn(filename));
-    }
-
-    public Huffman(File file) {
-        this(new BitsIn(file));
+    public Huffman(String inputFilename, String outputFilename, boolean details) {
+        this(inputFilename == null? new BitsIn(): new BitsIn(inputFilename),
+                outputFilename == null? new BitsOut(): new BitsOut(outputFilename), details);
     }
 
     // TODO: Fill out the expand method
     private void expand() {}
-
-    private void compress(String... filename) {
-        compress(new BitsOut(filename));
-    }
 
     private void compress(BitsOut out) {
         for (Bits b: header.dump()) {
@@ -111,12 +134,16 @@ public class Huffman {
         out.close();
     }
 
-    public void auto(String... outputFilename) {
-        auto(new File(Utils.join(outputFilename)));
+    private void println(String things) {
+        if (this.detail) {
+            System.out.println(things);
+        }
     }
 
-    public void auto(File outputFile) {
-        compress(new BitsOut(outputFile));
+    private void print(String things) {
+        if (this.detail) {
+            System.out.print(things);
+        }
     }
 
 }

@@ -23,6 +23,7 @@ public class Main {
         String outputFilename = null;
         boolean optionDashO = false;
         boolean optionDashI = false;
+        boolean optionDashV = false;
 
         int tempLoopVariable = 0;
         for (String a: args) {
@@ -34,8 +35,8 @@ public class Main {
             printHelpMessage();
             return;
         }
-        inputFilename = "-h--help-V-I-O-v".contains(args[args.length - 2])? null: args[args.length - 2];
-        outputFilename = "-h--help-V-I-O-v".contains(args[args.length - 1])? null: args[args.length - 1];
+        inputFilename = "-h--help-I-O-v".contains(args[args.length - 2])? null: args[args.length - 2];
+        outputFilename = "-h--help-I-O-v".contains(args[args.length - 1])? null: args[args.length - 1];
 
         if (argSet.containsKey("-h") || argSet.containsKey("--help")) {
             printHelpMessage();
@@ -57,7 +58,7 @@ public class Main {
             }
 
             if (argSet.containsKey("-v")) {
-
+                optionDashV = true;
             }
         }
 
@@ -75,16 +76,16 @@ public class Main {
 
         // TODO: Remove this test stuff.
 
-        new Huffman(inputFilename).auto(outputFilename);
+        new Huffman(inputFilename, outputFilename, optionDashV);
 
-        ProgressBar.initialize("1000");
-        for (int i = 0; i <= 1000; i+= 10) {
-            for (int j = 0; j <= 1000000; j++) {
-                System.out.println("?");
-            }
-            ProgressBar.add(i);
-
-        }
+//        ProgressBar.initialize("1000");
+//        for (int i = 0; i <= 1000; i+= 10) {
+//            for (int j = 0; j <= 1000000; j++) {
+//                System.out.println("?");
+//            }
+//            ProgressBar.add(i);
+//
+//        }
 
         System.out.println("Processing: Done!");
     }
