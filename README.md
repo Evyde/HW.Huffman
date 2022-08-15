@@ -93,7 +93,7 @@ And next to the pending bits, there is actual compressed file content, which wou
 end with pending because before compressed file content, they are already aligned by bytes.
 
 ### Modules
-#### Bits
+#### Bit Operation
 ##### Output
 I designed a class that can print bits/bytes to output stream, also a file.
 It is simply to use, just like this:
@@ -105,8 +105,10 @@ BitsOut bo3 = new BitsOut(new ByteArrayOutputStream());
 
 bo.write(33333); // write int
 bo2.write(true); // write bit
-bo3.write(2); // write byte
+bo3.write((byte) 2); // write byte
 bo.write(0b111, 3); // write 3bit of int
+bo2.write(new Bits(new BigInteger("1234567890ABCDEF"))); // write bits in BigInteger
+bo3.write(new Bits("01111", 127)); // write bits in Bits
 
 bo.close(); // close and flush
 bo2.close();
@@ -123,15 +125,20 @@ BitsIn bi = new BitsIn(); // default is System.in
 BitsIn bi2 = new BitsIn("/home/evyde/", "test.in");
 BitsIn bi3 = new BitsIn(new ByteArrayInputStream());
 
-bi.read(); // read 32bit int
-bi2.readBits(3); // read bits in boolean array
-bi3.read(2); // read bits in int
+bi2.readBooleanBits(3); // read bits in boolean array
+bi3.read(2); // read bits in Bits
 bi.readByte(); // read byte
 
 bi.close(); // close
 bi2.close();
 bi3.close();
 ```
+
+##### Bits
+This Bits class is like BigInteger in Java, it uses boolean array as inherent storage.
+It can take string, integer, BigInteger as parameter and can specify bits length and can be compared with other Bits.
+
+See BitsTest.java for more usage example.
 
 ## License
 
