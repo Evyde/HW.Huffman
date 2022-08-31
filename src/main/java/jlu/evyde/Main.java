@@ -7,34 +7,69 @@ import java.util.*;
 public class Main {
     private static final ResourceBundle rb = ResourceBundle.getBundle("ManPage", Locale.US);
 
+    static final Map<String, String> options = new HashMap<>();
+
+    static {
+        options.put("OptionH", "-h");
+        options.put("OptionHelp", "--help");
+        options.put("OptionV", "-v");
+        options.put("OptionI", "-I");
+        options.put("OptionO", "-O");
+    }
+
     private static void printHelpMessage() {
         System.out.println(rb.getString("DESCRIPTION"));
         System.out.println(rb.getString("USAGE"));
-        System.out.println("-I\t\t" + rb.getString("DASH_I"));
-        System.out.println("-O\t\t" + rb.getString("DASH_O"));
-        System.out.println("-v\t\t" + rb.getString("DASH_V"));
-        System.out.println("-h/--help\t" + rb.getString("DASH_H"));
+        System.out.println("java Huffman/jlu.evyde.Main [-I-O-v-h] [Input File] [Output File]");
+        System.out.println(options.get("OptionI") + "\t\t" + rb.getString("DASH_I"));
+        System.out.println(options.get("OptionO") + "\t\t" + rb.getString("DASH_O"));
+        System.out.println(options.get("OptionV") + "\t\t" + rb.getString("DASH_V"));
+        System.out.println(options.get("OptionH") + "/" + options.get("OptionHelp") + "\t" + rb.getString(
+                "DASH_H"));
     }
 
     public static void main(String[] args) {
 
         Map<String, Integer> argSet = new HashMap<>();
+        Map<String, Integer> switchSet = new HashMap<>();
+
         String inputFilename = null;
         String outputFilename = null;
-        boolean optionDashO = false;
-        boolean optionDashI = false;
-        boolean optionDashV = false;
+        String allOptions;
+
+        {
+            StringBuilder sb = new StringBuilder();
+
+            for (String s: options.values()) {
+                sb.append(s.replaceAll("-", ""));
+            }
+
+            allOptions = sb.toString();
+        }
+
+        boolean optionDashOOn = false;
+        boolean optionDashIOn = false;
+        boolean optionDashVOn = false;
+        int type = 0;
+        // TODO: Add type detective
+
+        // TODO: Replace this command tool method with better choice
+
+        // TODO: Fix -I give but no output file name give so out of index issue
 
         int tempLoopVariable = 0;
         for (String a: args) {
             argSet.put(a, tempLoopVariable++);
         }
-
-        // use last two arguments as input/output filename
-        if (args.length < 2) {
-            printHelpMessage();
-            return;
+        tempLoopVariable = 0;
+        for (String a: args) {
+            if (a.startsWith("-")) {
+                switchSet.put(a, tempLoopVariable++);
+            }
         }
+
+        // System.out.println(Arrays.toString(switchSet.keySet().toArray(new String[0])));
+
         inputFilename = "-h--help-I-O-v".contains(args[args.length - 2])? null: args[args.length - 2];
         outputFilename = "-h--help-I-O-v".contains(args[args.length - 1])? null: args[args.length - 1];
 
@@ -48,35 +83,40 @@ public class Main {
                     System.err.println(rb.getString("CONFLICT"));
                     return;
                 } else {
-                    optionDashO = true;
+                    optionDashOOn = true;
                 }
             }
 
             if (argSet.containsKey("-I")) {
                 inputFilename = null;
-                optionDashI = true;
+                optionDashIOn = true;
             }
 
             if (argSet.containsKey("-v")) {
-                optionDashV = true;
+                optionDashVOn = true;
             }
         }
 
 
-        if (!optionDashI && inputFilename == null) {
+        if (!optionDashIOn && inputFilename == null) {
             System.err.println(rb.getString("ERROR_PLEASE_SPECIFY_INPUT_FILENAME"));
         }
 
-        if (!optionDashO && outputFilename == null) {
+        if (!optionDashOOn && outputFilename == null) {
             System.err.println(rb.getString("ERROR_PLEASE_SPECIFY_OUTPUT_FILENAME"));
         }
 
-        System.out.println("Would read from " + (optionDashI? "standard input": inputFilename)
-                + " and write out to " + (optionDashO? "standard output": outputFilename) + ".");
+        if (!optionDashIOn && !optionDashOOn) {
+            // use last two arguments as input/output filename
+            if (args.length - switchSet.keySet().size() < 2) {
+                printHelpMessage();
+                return;
+            }
+        }
 
         // TODO: Remove this test stuff.
 
-        new Huffman(inputFilename, outputFilename, optionDashV);
+        new Huffman(inputFilename, outputFilename, optionDashVOn, 0);
 
 //        ProgressBar.initialize("1000");
 //        for (int i = 0; i <= 1000; i+= 10) {
@@ -86,7 +126,5 @@ public class Main {
 //            ProgressBar.add(i);
 //
 //        }
-
-        System.out.println("Processing: Done!");
     }
 }

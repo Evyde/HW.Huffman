@@ -7,7 +7,7 @@ import java.util.List;
 
 public class Bits implements Comparable<Bits> {
     private final Deque<Boolean> bits = new LinkedList<>();
-    private final int length;
+    private int length;
 
     public Bits(String bitsInString) {
         this(bitsInString, bitsInString.length());
@@ -191,5 +191,10 @@ public class Bits implements Comparable<Bits> {
     @Override
     public int compareTo(Bits o) {
         return compare(this, o);
+    }
+
+    public void expand(Bits b) {
+        this.bits.addAll(b.bits);
+        this.length += b.getLength();
     }
 }

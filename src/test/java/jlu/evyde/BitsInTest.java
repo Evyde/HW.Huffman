@@ -77,6 +77,7 @@ public class BitsInTest {
 
         bi1.reset();
         bi2.reset();
+
         assertEquals(bi2.readBits(8), bi1.readBits(8));
         assertEquals(bi2.readBits(17), bi1.readBits(17));
         assertEquals(bi2.readBits(6), bi1.readBits(6));

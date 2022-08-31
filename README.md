@@ -2,6 +2,10 @@
 
 哈夫曼压缩/解压缩器，是JLU的数据结构作业。
 
+## Running Snapshot
+
+[![asciicast](https://asciinema.org/a/3odwcknzw6MeGnEpdD2IHtrNW.svg)](https://asciinema.org/a/3odwcknzw6MeGnEpdD2IHtrNW)
+
 ## Design
 
 ### File Structure

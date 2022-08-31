@@ -1,10 +1,21 @@
 package jlu.evyde;
 
 import java.io.*;
+import java.math.BigInteger;
+import java.util.List;
+import java.util.zip.CRC32;
 
 
 public class BitsOut {
     private BufferedOutputStream stream;
+
+    private final BigInteger minusOne = new BigInteger("-1");
+
+    private BigInteger writeLimit = minusOne;
+
+    private BigInteger alreadyWrite = new BigInteger("0");
+
+    private final CRC32 CRC32Code = new CRC32();
 
     private int buffer;
 
@@ -38,7 +49,7 @@ public class BitsOut {
     private void writeBit(boolean b) {
         buffer <<= 1;
         if (b) {
-            buffer += 1;
+            buffer |= 1;
         }
         this.pointer++;
         if (this.pointer == 8) {
@@ -64,6 +75,10 @@ public class BitsOut {
     }
 
     private void clearBuffer() {
+        if (this.isReachWriteLimit()) {
+            return;
+        }
+
         if (this.pointer == 0) {
             return;
         }
@@ -73,6 +88,8 @@ public class BitsOut {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        this.CRC32Code.update(buffer);
+        this.alreadyWrite = this.alreadyWrite.add(new BigInteger("8"));
         this.pointer = 0;
         this.buffer = 0;
     }
@@ -125,5 +142,27 @@ public class BitsOut {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void write(List<Bits> bitsList) {
+        for (Bits b: bitsList) {
+            this.write(b);
+        }
+    }
+
+    public CRC32 getCRC32Code() {
+        return CRC32Code;
+    }
+
+    public void setWriteLimit(BigInteger writeLimit) {
+        this.writeLimit = writeLimit;
+    }
+
+    public boolean isReachWriteLimit() {
+        return this.writeLimit.compareTo(minusOne) != 0 && this.alreadyWrite.compareTo(writeLimit) >= 0;
+    }
+
+    public BigInteger getAlreadyWrite() {
+        return alreadyWrite;
     }
 }

@@ -1,5 +1,8 @@
 package jlu.evyde;
 
+import java.io.*;
+import java.util.Map;
+
 public class Utils {
     public static String join(String... strings) {
         StringBuilder sb = new StringBuilder();
@@ -53,5 +56,50 @@ public class Utils {
 
     public static byte[] longToByteArray(long i) {
         return longToByteArray(i, 8);
+    }
+
+    public static class RandomAccessFileStream extends InputStream {
+
+        private final RandomAccessFile raf;
+
+        public RandomAccessFileStream(RandomAccessFile raf) {
+            this.raf = raf;
+        }
+
+        @Override
+        public int read() throws IOException {
+            return raf.read();
+        }
+
+        @Override
+        public boolean markSupported() {
+            return true;
+        }
+
+        @Override
+        public void close() throws IOException {
+            raf.close();
+        }
+
+        @Override
+        public synchronized void reset() throws IOException {
+            raf.seek(0);
+        }
+    }
+
+    public static void mapVisualize(Map<?, ?> map) {
+        StringBuilder sb = new StringBuilder("Map: [");
+
+        for (Object key: map.keySet()) {
+            if (sb.length() % 80 == 0) {
+                sb.append('\n');
+            }
+            sb.append(key).append(": ");
+            sb.append(map.get(key));
+            sb.append(", ");
+        }
+
+        sb.append("]");
+        System.out.println(sb);
     }
 }
