@@ -1,10 +1,31 @@
 # Huffman Compressor
 
-哈夫曼压缩/解压缩器，是JLU的数据结构作业。
+哈夫曼压及等长编码解/压缩器，是JLU的数据结构作业。
 
 ## Running Snapshot
 
-[![asciicast](https://asciinema.org/a/3odwcknzw6MeGnEpdD2IHtrNW.svg)](https://asciinema.org/a/3odwcknzw6MeGnEpdD2IHtrNW)
+[![asciicast](https://asciinema.org/a/3EQO9Q1KqSt7RXJxAZJDkozsC.svg)](https://asciinema.org/a/3EQO9Q1KqSt7RXJxAZJDkozsC)
+
+## Usage
+
+Normally, you can just call it with filename you want to read/write.
+
+```shell
+java -Dfile.encoding=UTF-8 jlu.evyde.HC [-I-O-v-h] [Input File] [Output File] [-t] [Type]
+```
+
+-I: Redirect input stream to standard input.
+-O: Redirect output stream to standard output.
+-v: Details of compression process, could have conflict with -O.
+-h/--help: Display usage.
+-t: Specify the type (could infect compression rate) you want, or it will detect a proper
+type automatically.
+
+Or with Linux/Unix tar program and pipe, you don't have to specify the filename.
+
+```shell
+tar c ./ | java jlu.evyde.HC -I -O | java jlu.evyde.HC -I -O | tar xv
+```
 
 ## Design
 
@@ -62,11 +83,11 @@ The prefix free codec table is:
 
 | Character | Codec in Binary |
 |:---------:|:---------------:|
-|     a     |    00000000     |
-|     b     |    00000100     |
-|     c     |    00000101     |
-|     d     |    00000110     |
-|     e     |    00000111     |
+|     a     |        0        |
+|     b     |       100       |
+|     c     |       101       |
+|     d     |       110       |
+|     e     |       111       |
 
 In the beginning of content, there is a bit for indicating this leaf is a true leaf,
 or just another parent of other leaves.
@@ -76,13 +97,11 @@ So, the binary structure of this tree is:
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1  32 bits
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|1|ASCII 'a' in bin |0 0 0 0 0 0 0 0 0|0|0|1|ASCII 'b' in bin |0|
+|0|1|ASCII 'a' in bin |0|0|1|ASCII 'b' in bin |1 0 0|1|ASCII 'c'|
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|0 0 0 0 1 0 0|1|ASCII 'c' in bin |0 0 0 0 0 1 0 1|0|1|ASCII 'd'|
+|inbin|1 0 1|0|1|ASCII 'd' in bin |1 1 0|1|ASCII 'e' in bin |1 1|
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|in bin |1|0 0 0 0 0 1 1 0|ASCII 'e' in bin |0 0 0 0 0 1 1 1|0 0|
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                     Compressed File Content                   |
+|1|                  Compressed File Content                    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7  4 bytes
 ```
@@ -91,13 +110,17 @@ It compresses binary straightly (Same effect to ASCII).
 
 In English, the content structure is started by 0 or 1, which is represented to
 this node is the leaf node or not, then followed by content -- the key of the map,
-finally ended with n bits (here is 8) wide huffman codec -- the value of the map.
+finally ended with n bits wide huffman codec -- the value of the map.
 
-And next to the pending bits, there is actual compressed file content, which wouldn't
-end with pending because before compressed file content, they are already aligned by bytes.
+And next to the last huffman bits, there is actual compressed file content, which could
+end with pending but the process of expanding will set a limit to that.
 
 ### Modules
-#### Bit Operation
+#### Bits' Operation
+
+During Bits' I/O operation, there are two classes which can not only read/write but
+also record the CRC32 code and Bits of things it already read/wrote.
+
 ##### Output
 I designed a class that can print bits/bytes to output stream, also a file.
 It is simply to use, just like this:
@@ -143,6 +166,23 @@ This Bits class is like BigInteger in Java, it uses boolean array as inherent st
 It can take string, integer, BigInteger as parameter and can specify bits length and can be compared with other Bits.
 
 See BitsTest.java for more usage example.
+
+##### Huffman
+This class will handle compress and expand, also the header thing, just call it with
+
+```java
+new Huffman("input file name", "output file name", true, 2);
+```
+
+It will detect this file need to compress/expand automatically.
+
+Notice that it won't check the type you give, you must check it is the multiples of two (<= 0 is legal).
+
+### Compression Rate
+
+The huffman compressor will reckon an estimation length with huffman trie it already generated,
+then when finishing compressing, it will calculate an accurate value it already wrote (without the header length 
+which is fixed length 288 bits) and divide it by source length (things it already read).
 
 ## License
 

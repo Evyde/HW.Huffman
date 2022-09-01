@@ -33,7 +33,8 @@ public class Huffman {
     public class Header {
         public static final Bits MAGIC_NUMBER = new Bits(0x01711EF3, 32);
         public static final Bits VERSION = new Bits(1, 8);
-        private final byte type;
+        public static final long LENGTH = 288;
+        private final int type;
         private final int trieLength;
         private final Bits sourceLength;
 
@@ -41,17 +42,26 @@ public class Huffman {
 
         public Header(BitsIn in) {
             // valid header, read it
-            this.type = in.readByte();
-            this.trieLength = in.readInt(16);
+            this.type = in.readUnsignedByte();
+            int tempTrieLength = in.readInt(16);
+            if (tempTrieLength == 0xFFFF) {
+                this.trieLength = 0xFFFFFFFF;
+            } else {
+                this.trieLength = tempTrieLength;
+            }
             this.sourceLength = in.read(64);
             this.CRC32Code = in.readInt();
             in.read(128);
             // 8 + 16 + 64 + 32 + 128 = 248 + (32 + 8) = 288
         }
 
-        public Header(byte type, int trieLength, Bits sourceLength, int CRC32Code) {
+        public Header(int type, int trieLength, Bits sourceLength, int CRC32Code) {
             this.type = type;
-            this.trieLength = trieLength;
+            if (trieLength >= 0xFFFF) {
+                this.trieLength = 0xFFFFFFFF;
+            } else {
+                this.trieLength = trieLength;
+            }
             this.sourceLength = sourceLength;
             this.CRC32Code = CRC32Code;
         }
@@ -70,7 +80,7 @@ public class Huffman {
             return trieLength;
         }
 
-        public byte getType() {
+        public int getType() {
             return type;
         }
 
@@ -82,7 +92,7 @@ public class Huffman {
             List<Bits> header = new ArrayList<>();
             header.add(MAGIC_NUMBER);
             header.add(VERSION);
-            header.add(new Bits(getType()));
+            header.add(new Bits(getType(), 8));
             header.add(new Bits(getTrieLength(), 16));
 
             header.add(new Bits(getSourceLength().toString(), 64));
@@ -100,7 +110,8 @@ public class Huffman {
             sb.append("Magic number: ").append(new BigInteger(MAGIC_NUMBER.toString(), 2).toString(16)).append(".\n");
             sb.append("Version: ").append(new BigInteger(VERSION.toString(), 2).longValue()).append(".\n");
             sb.append("Type: ").append(type).append(".\n");
-            sb.append("Trie length: ").append(trieLength).append(" bits.\n");
+            sb.append("Trie length: ").append(trieLength).append(" bits" +
+                    ".\n");
             sb.append("Source length: ").append(new BigInteger(sourceLength.toString(), 2).toString(10))
                     .append(" bits.\n");
             sb.append("CRC32 code: ").append(new BigInteger(new Bits(CRC32Code).toString(), 2).toString(16)).append(".\n");
@@ -146,7 +157,7 @@ public class Huffman {
 
     private List<Node> walkTrie(Node node, List<Node> list, BigInteger hierarchy) {
         if (node.isLeaf()) {
-            list.add(new Node(node.feature, node.appearTimes.multiply(hierarchy), null, null));
+            list.add(new Node(node.feature, node.appearTimes.multiply(hierarchy).add(hierarchy), null, null));
         } else {
             walkTrie(node.left, list, hierarchy.add(new BigInteger("1")));
             walkTrie(node.right, list, hierarchy.add(new BigInteger("1")));
@@ -209,9 +220,11 @@ public class Huffman {
 
     private void compress(BitsIn in, BitsOut out, int type) {
         // statistic word(binary) frequency
-
+        int STAGE = 3;
+        ProgressBarWrapper pbs = new ProgressBarWrapper("Compress Stage", STAGE, detail);
         Node first = null;
 
+        pbs.setExtraMessage("Detecting type.");
         if (type <= 0) {
             class BitLengthMapElement implements Comparable<BitLengthMapElement> {
                 public final int key;
@@ -226,15 +239,19 @@ public class Huffman {
 
                 @Override
                 public int compareTo(BitLengthMapElement o) {
+                    if (o == null) {
+                        return 1;
+                    }
                     return this.length.compareTo(o.length);
                 }
             }
 
             PriorityQueue<BitLengthMapElement> autoDetectType = new PriorityQueue<>();
-
-            for (int i = 2; i <= 8; i *= 2) {
+            ProgressBarWrapper pbts = new ProgressBarWrapper("Auto detecting", 7, detail);
+            for (int i = 128; i >= 2; i /= 2) {
                 try {
-                    println("Try " + i + " bits.");
+                    System.gc();
+                    pbts.setExtraMessage("Trying " + i + " bits");
                     HashMap<Bits, BigInteger> frequency = new HashMap<>();
                     PriorityQueue<Node> tempPQ = getFrequency(in, frequency, i,
                             (a, b) -> Integer.compare(a.compareTo(b), 0));
@@ -249,26 +266,37 @@ public class Huffman {
                         sum = sum.add(n.appearTimes.add(new BigInteger(String.valueOf(i))));
                     }
 
-                    autoDetectType.add(new BitLengthMapElement(i, sum, parent));
+                    BitLengthMapElement nowBitsLength = new BitLengthMapElement(i, sum, parent);
 
-                    println("Est will be " + sum + " bits.");
+                    autoDetectType.add(nowBitsLength);
+                    pbts.step();
+                    pbts.setExtraMessage("Estimate will be " + sum + " bits.");
+                    // Wrong type detection code
+//                    if (nowBitsLength.compareTo(autoDetectType.peek()) > 0) {
+//                        break;
+//                    }
                 } catch (Error e) {
-                    if (this.detail) {
-                        e.printStackTrace();
-                    }
 
                     // TODO: Complete type detection algorithm.
 
-                    println("Error detected, back to last tried.");
+                    println("Error detected, try next.");
                     autoDetectType.poll();
-                    break;
+                    continue;
                 }
             }
+            pbts.step(7);
 
             BitLengthMapElement temp = autoDetectType.poll();
             type = temp == null? 8: temp.key;
             first = temp == null? null: temp.parent;
+            pbts.setExtraMessage("Using type " + type + ".");
+            pbts.refresh();
+            pbts.close();
+            pbs.setExtraMessage("Select type " + type + ".");
+            pbs.refresh();
         }
+        pbs.step();
+        pbs.refresh();
 
         if (first == null) {
             first = buildTrie(getFrequency(in, new HashMap<>(), type, (a, b) -> Integer.compare(a.compareTo(b), 0)));
@@ -276,15 +304,25 @@ public class Huffman {
 
         HashMap<Bits, Bits> codeMap = new HashMap<>();
 
-        // Utils.mapVisualize(codeMap);
+        pbs.setExtraMessage("Generating Header.");
+        pbs.refresh();
+
         Header header;
         if (first.isLeaf()) {
-            header  = new Header((byte) type, generateCode(codeMap, first, "0", false), in.getContentLength(),
+            header  = new Header(type, generateCode(codeMap, first, "0", false), in.getContentLength(),
                     (int) in.getCRC32Code().getValue());
         } else {
-            header = new Header((byte) type, generateCode(codeMap, first, "", false), in.getContentLength(),
+            header = new Header(type, generateCode(codeMap, first, "", false), in.getContentLength(),
                     (int) in.getCRC32Code().getValue());
         }
+
+        // Utils.mapVisualize(codeMap);
+
+        pbs.step();
+        pbs.setExtraMessage("Writing.");
+        pbs.refresh();
+
+        ProgressBarWrapper pbWrite = new ProgressBarWrapper("Writing", in.getContentLength(), detail);
 
         // write header
         out.write(header.dump());
@@ -292,17 +330,30 @@ public class Huffman {
         // write trie
         writeTrie(first, out, type);
 
+        // TODO: Try to figure out what happened in the hashmap: could not find the key
         // write content
         while (!in.isEOF()) {
-            out.write(codeMap.get(in.read(type)));
+            try {
+                out.write(codeMap.get(in.read(type)));
+                pbWrite.stepBy(type);
+            } catch (Exception e) {
+                System.err.println("Failed!");
+                System.exit(1);
+                break;
+            }
         }
+        pbWrite.refresh();
+        pbWrite.close();
+        pbs.step();
+        pbs.setExtraMessage("Complete!");
+        pbs.close();
         out.flush();
         out.close();
         println("Complete!\n" + header);
         long before = Long.parseLong(new BigInteger(header.sourceLength.toString(), 2).toString(10));
         long after = Long.parseLong(out.getAlreadyWrite().toString(10));
         // minus header
-        after -= 288;
+        after -= Header.LENGTH;
         println("Compression rate: " + after + "/" + before + " = " + new BigDecimal(after * 100)
                 .setScale(2, RoundingMode.HALF_UP)
                 .divide(new BigDecimal(before)
@@ -328,8 +379,15 @@ public class Huffman {
 
     private PriorityQueue<Node> getFrequency(BitsIn in, HashMap<Bits, BigInteger> frequency, int type,
                                              Comparator<Node> pqComparator) {
+        ProgressBarWrapper pb;
+        if (in.isCRC32Generated()) {
+            pb = new ProgressBarWrapper("Getting frequency", in.getContentLength(), detail);
+        } else {
+            pb = new ProgressBarWrapper("Getting frequency", -1, detail);
+        }
         while (!in.isEOF()) {
             Bits tempByte = in.read(type);
+            pb.stepBy(type);
             assert tempByte.getLength() == type;
             if (frequency.containsKey(tempByte)) {
                 frequency.put(tempByte, frequency.get(tempByte).add(new BigInteger("1")));
@@ -344,7 +402,9 @@ public class Huffman {
             pq.add(new Node(keySet, frequency.get(keySet), null, null));
         }
 
-        in.reset();
+        in.softReset();
+        pb.refresh();
+        pb.close();
         return pq;
     }
 

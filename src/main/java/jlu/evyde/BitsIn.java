@@ -76,6 +76,10 @@ public class BitsIn {
         return returnByte;
     }
 
+    public int readUnsignedByte() {
+        return this.readByte() & 0xFF;
+    }
+
     public int readInt() {
         // read an 32-bit int
         return readInt(32);
@@ -115,6 +119,7 @@ public class BitsIn {
     }
 
     private void fillBuffer() {
+        // TODO: Stream could not shutdown properly.
         try {
             buffer = this.stream.read();
             if (buffer == EOF) {
@@ -185,5 +190,9 @@ public class BitsIn {
 
     public CRC32 getCRC32Code() {
         return CRC32Code;
+    }
+
+    public boolean isCRC32Generated() {
+        return isCRC32Generated;
     }
 }

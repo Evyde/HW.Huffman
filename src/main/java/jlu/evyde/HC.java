@@ -1,10 +1,8 @@
 package jlu.evyde;
 
-import java.io.BufferedInputStream;
-import java.io.InputStream;
 import java.util.*;
 
-public class Main {
+public class HC {
     private static final ResourceBundle rb = ResourceBundle.getBundle("ManPage", Locale.US);
 
     static final Map<String, String> options = new HashMap<>();
@@ -20,7 +18,7 @@ public class Main {
     private static void printHelpMessage() {
         System.out.println(rb.getString("DESCRIPTION"));
         System.out.println(rb.getString("USAGE"));
-        System.out.println("java Huffman/jlu.evyde.Main [-I-O-v-h] [Input File] [Output File]");
+        System.out.println("java Huffman/jlu.evyde.HC [-I-O-v-h] [Input File] [Output File]");
         System.out.println(options.get("OptionI") + "\t\t" + rb.getString("DASH_I"));
         System.out.println(options.get("OptionO") + "\t\t" + rb.getString("DASH_O"));
         System.out.println(options.get("OptionV") + "\t\t" + rb.getString("DASH_V"));
