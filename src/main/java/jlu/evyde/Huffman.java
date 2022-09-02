@@ -7,7 +7,7 @@ import java.util.*;
 
 public class Huffman {
 
-    public class Node implements Comparable<Node> {
+    public static class Node implements Comparable<Node> {
         private final BigInteger appearTimes;
         private final Bits feature;
         private final Node left;
@@ -30,7 +30,7 @@ public class Huffman {
         }
     }
 
-    public class Header {
+    public static class Header {
         public static final Bits MAGIC_NUMBER = new Bits(0x01711EF3, 32);
         public static final Bits VERSION = new Bits(1, 8);
         public static final long LENGTH = 288;
@@ -146,7 +146,7 @@ public class Huffman {
         while (frequency.size() > 1) {
             Node left = frequency.poll();
             Node right = frequency.poll();
-            Node parent = new Node(null, left.appearTimes.add(right != null? right.appearTimes:
+            Node parent = new Node(null, left.appearTimes.add(right != null ? right.appearTimes :
                     new BigInteger("0")),
                     left, right);
             frequency.add(parent);
@@ -184,7 +184,6 @@ public class Huffman {
         return sum;
     }
 
-    // TODO: Fill out the expand method
     private void expand(Header header, BitsIn in, BitsOut out) {
         println(header.toString());
         HashMap<Bits, Bits> codeMap = new HashMap<>();
@@ -252,6 +251,7 @@ public class Huffman {
                 try {
                     System.gc();
                     pbts.setExtraMessage("Trying " + i + " bits");
+                    pbts.refresh();
                     HashMap<Bits, BigInteger> frequency = new HashMap<>();
                     PriorityQueue<Node> tempPQ = getFrequency(in, frequency, i,
                             (a, b) -> Integer.compare(a.compareTo(b), 0));
@@ -271,17 +271,14 @@ public class Huffman {
                     autoDetectType.add(nowBitsLength);
                     pbts.step();
                     pbts.setExtraMessage("Estimate will be " + sum + " bits.");
-                    // Wrong type detection code
-//                    if (nowBitsLength.compareTo(autoDetectType.peek()) > 0) {
-//                        break;
-//                    }
                 } catch (Error e) {
-
-                    // TODO: Complete type detection algorithm.
-
-                    println("Error detected, try next.");
-                    autoDetectType.poll();
-                    continue;
+                    pbts.setExtraMessage("Error detected, try next.");
+                    pbts.refresh();
+                    in.softReset();
+                    if (autoDetectType.peek() != null && autoDetectType.peek().key == i) {
+                        autoDetectType.poll();
+                        i /= 2;
+                    }
                 }
             }
             pbts.step(7);
@@ -330,7 +327,6 @@ public class Huffman {
         // write trie
         writeTrie(first, out, type);
 
-        // TODO: Try to figure out what happened in the hashmap: could not find the key
         // write content
         while (!in.isEOF()) {
             try {

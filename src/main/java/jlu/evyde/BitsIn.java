@@ -11,6 +11,8 @@ public class BitsIn {
 
     private static final int EOF = -1;
 
+    private boolean isEOF = false;
+
     private final CRC32 CRC32Code = new CRC32();
 
     private int buffer;
@@ -36,8 +38,6 @@ public class BitsIn {
 
     public BitsIn(File file) {
         try {
-            // this.contentLength = new BigInteger(String.valueOf(file.length() * 8));
-            file.setReadable(true);
             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
             this.totalContentLength = new BigInteger(String.valueOf(file.length())).multiply(new BigInteger("8"));
             this.stream = new Utils.RandomAccessFileStream(randomAccessFile);
@@ -115,15 +115,20 @@ public class BitsIn {
     }
 
     public boolean isEOF() {
-        return buffer == EOF;
+        return isEOF;
     }
 
     private void fillBuffer() {
-        // TODO: Stream could not shutdown properly.
         try {
+            if (isEOF()) {
+                buffer = 0;
+                this.pointer = 8;
+                return;
+            }
             buffer = this.stream.read();
             if (buffer == EOF) {
-                this.pointer = -1;
+                buffer = 0;
+                isEOF = true;
             } else {
                 this.tempContentLength = this.tempContentLength.add(new BigInteger("8"));
                 if (this.tempContentLength.compareTo(totalContentLength) >= 0) {
@@ -136,8 +141,9 @@ public class BitsIn {
             }
         } catch (IOException ie) {
             ie.printStackTrace();
-            buffer = EOF;
-            this.pointer = -1;
+            isEOF = true;
+            buffer = 0;
+            this.pointer = 8;
         }
     }
 
@@ -147,6 +153,7 @@ public class BitsIn {
         } catch (IOException e) {
             e.printStackTrace();
             buffer = EOF;
+            isEOF = true;
             this.pointer = EOF;
         }
     }
@@ -161,6 +168,7 @@ public class BitsIn {
             this.stream.reset();
             buffer = 0;
             this.pointer = 8;
+            isEOF = false;
             this.tempContentLength = new BigInteger("0");
             this.isCRC32Generated = true;
             fillBuffer();
@@ -177,6 +185,7 @@ public class BitsIn {
             this.tempContentLength = new BigInteger("0");
             this.totalContentLength = new BigInteger("0");
             this.CRC32Code.reset();
+            isEOF = false;
             this.isCRC32Generated = false;
             fillBuffer();
         } catch (IOException e) {

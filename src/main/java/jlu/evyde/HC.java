@@ -13,12 +13,13 @@ public class HC {
         options.put("OptionV", "-v");
         options.put("OptionI", "-I");
         options.put("OptionO", "-O");
+        options.put("OptionT", "-t");
     }
 
     private static void printHelpMessage() {
         System.out.println(rb.getString("DESCRIPTION"));
         System.out.println(rb.getString("USAGE"));
-        System.out.println("java Huffman/jlu.evyde.HC [-I-O-v-h] [Input File] [Output File]");
+        System.out.println("java -jar huffman.jar [-I-O-v-h] [-t] [Type] [Input File] [Output File]");
         System.out.println(options.get("OptionI") + "\t\t" + rb.getString("DASH_I"));
         System.out.println(options.get("OptionO") + "\t\t" + rb.getString("DASH_O"));
         System.out.println(options.get("OptionV") + "\t\t" + rb.getString("DASH_V"));
@@ -28,56 +29,66 @@ public class HC {
 
     public static void main(String[] args) {
 
-        Map<String, Integer> argSet = new HashMap<>();
-        Map<String, Integer> switchSet = new HashMap<>();
+        Set<String> switchSet = new HashSet<>();
 
         String inputFilename = null;
         String outputFilename = null;
-        String allOptions;
 
-        {
-            StringBuilder sb = new StringBuilder();
-
-            for (String s: options.values()) {
-                sb.append(s.replaceAll("-", ""));
-            }
-
-            allOptions = sb.toString();
+        if (args.length < 2) {
+            printHelpMessage();
+            return;
         }
 
         boolean optionDashOOn = false;
         boolean optionDashIOn = false;
         boolean optionDashVOn = false;
+        boolean optionDashTOn = false;
+
         int type = 0;
-        // TODO: Add type detective
+        List<String> argList = new ArrayList<>();
 
-        // TODO: Replace this command tool method with better choice
-
-        // TODO: Fix -I give but no output file name give so out of index issue
-
-        int tempLoopVariable = 0;
         for (String a: args) {
-            argSet.put(a, tempLoopVariable++);
-        }
-        tempLoopVariable = 0;
-        for (String a: args) {
-            if (a.startsWith("-")) {
-                switchSet.put(a, tempLoopVariable++);
+            if (optionDashTOn) {
+                optionDashTOn = false;
+                try {
+                    type = Integer.parseInt(a);
+                    if (type <= 0 || type % 2 != 0 || (type % 8 != 0 || 8 % type != 0) || type > 128) {
+                        throw new NumberFormatException();
+                    }
+                    continue;
+                } catch (NumberFormatException nfe) {
+                    type = 0;
+                }
             }
+
+            if (a.startsWith("-")) {
+                if (a.equals(options.get("OptionT"))) {
+                    optionDashTOn = true;
+                    continue;
+                }
+                switchSet.add(a);
+            } else if (inputFilename == null) {
+                inputFilename = a;
+            } else if (outputFilename == null) {
+                outputFilename = a;
+            }
+            argList.add(a);
         }
 
-        // System.out.println(Arrays.toString(switchSet.keySet().toArray(new String[0])));
+        args = argList.toArray(new String[]{});
 
-        inputFilename = "-h--help-I-O-v".contains(args[args.length - 2])? null: args[args.length - 2];
-        outputFilename = "-h--help-I-O-v".contains(args[args.length - 1])? null: args[args.length - 1];
+        if (args.length < 2) {
+            printHelpMessage();
+            return;
+        }
 
-        if (argSet.containsKey("-h") || argSet.containsKey("--help")) {
+        if (switchSet.contains(options.get("OptionH")) || switchSet.contains(options.get("OptionHelp"))) {
             printHelpMessage();
             return;
         } else {
-            if (argSet.containsKey("-O")) {
+            if (switchSet.contains(options.get("OptionO"))) {
                 outputFilename = null;
-                if (argSet.containsKey("-v")) {
+                if (switchSet.contains(options.get("OptionV"))) {
                     System.err.println(rb.getString("CONFLICT"));
                     return;
                 } else {
@@ -85,12 +96,12 @@ public class HC {
                 }
             }
 
-            if (argSet.containsKey("-I")) {
+            if (switchSet.contains(options.get("OptionI"))) {
                 inputFilename = null;
                 optionDashIOn = true;
             }
 
-            if (argSet.containsKey("-v")) {
+            if (switchSet.contains(options.get("OptionV"))) {
                 optionDashVOn = true;
             }
         }
@@ -98,31 +109,22 @@ public class HC {
 
         if (!optionDashIOn && inputFilename == null) {
             System.err.println(rb.getString("ERROR_PLEASE_SPECIFY_INPUT_FILENAME"));
+            return;
         }
 
         if (!optionDashOOn && outputFilename == null) {
             System.err.println(rb.getString("ERROR_PLEASE_SPECIFY_OUTPUT_FILENAME"));
+            return;
         }
 
         if (!optionDashIOn && !optionDashOOn) {
-            // use last two arguments as input/output filename
-            if (args.length - switchSet.keySet().size() < 2) {
+            // check if input/output filename exist
+            if (args.length - switchSet.size() < 2) {
                 printHelpMessage();
                 return;
             }
         }
 
-        // TODO: Remove this test stuff.
-
-        new Huffman(inputFilename, outputFilename, optionDashVOn, 0);
-
-//        ProgressBar.initialize("1000");
-//        for (int i = 0; i <= 1000; i+= 10) {
-//            for (int j = 0; j <= 1000000; j++) {
-//                System.out.println("?");
-//            }
-//            ProgressBar.add(i);
-//
-//        }
+        new Huffman(inputFilename, outputFilename, optionDashVOn, type);
     }
 }
