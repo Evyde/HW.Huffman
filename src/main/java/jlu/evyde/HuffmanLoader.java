@@ -2,7 +2,7 @@ package jlu.evyde;
 
 import java.util.*;
 
-public class HC {
+public class HuffmanLoader {
     private static final ResourceBundle rb = ResourceBundle.getBundle("ManPage", Locale.US);
 
     static final Map<String, String> options = new HashMap<>();
@@ -46,6 +46,7 @@ public class HC {
 
         int type = 0;
         List<String> argList = new ArrayList<>();
+        Deque<String> filenameList = new ArrayDeque<>(2);
 
         for (String a: args) {
             if (optionDashTOn) {
@@ -67,10 +68,8 @@ public class HC {
                     continue;
                 }
                 switchSet.add(a);
-            } else if (inputFilename == null) {
-                inputFilename = a;
-            } else if (outputFilename == null) {
-                outputFilename = a;
+            } else {
+                filenameList.add(a);
             }
             argList.add(a);
         }
@@ -87,7 +86,6 @@ public class HC {
             return;
         } else {
             if (switchSet.contains(options.get("OptionO"))) {
-                outputFilename = null;
                 if (switchSet.contains(options.get("OptionV"))) {
                     System.err.println(rb.getString("CONFLICT"));
                     return;
@@ -97,12 +95,27 @@ public class HC {
             }
 
             if (switchSet.contains(options.get("OptionI"))) {
-                inputFilename = null;
                 optionDashIOn = true;
             }
 
             if (switchSet.contains(options.get("OptionV"))) {
                 optionDashVOn = true;
+            }
+        }
+
+        if (!optionDashIOn) {
+            try {
+                inputFilename = filenameList.removeFirst();
+            } catch (NoSuchElementException ignored) {
+
+            }
+        }
+
+        if (!optionDashOOn) {
+            try {
+                outputFilename = filenameList.removeFirst();
+            } catch (NoSuchElementException ignored) {
+
             }
         }
 

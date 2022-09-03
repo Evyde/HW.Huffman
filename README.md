@@ -11,7 +11,7 @@
 Normally, you can just call it with filename you want to read/write.
 
 ```shell
-java -Dfile.encoding=UTF-8 jlu.evyde.HC [-I-O-v-h] [Input File] [Output File] [-t] [Type]
+java -Dfile.encoding=UTF-8 jlu.evyde.HuffmanLoaderffmanLoader [-I-O-v-h] [Input File] [Output File] [-t] [Type]
 ```
 
 -I: Redirect input stream to standard input.
@@ -24,7 +24,7 @@ type automatically.
 Or with Linux/Unix tar program and pipe, you don't have to specify the filename.
 
 ```shell
-tar c ./ | java jlu.evyde.HC -I -O | java jlu.evyde.HC -I -O | tar xv
+tar c ./ | java jlu.evyde.HuffmanLoaderffmanLoader -I -O | java jlu.evyde.HuffmanLoaderffmanLoader -I -O | tar xv
 ```
 
 ## Design

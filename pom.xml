@@ -44,7 +44,7 @@
                     <archive>
                         <!--指定main方法所在的类-->
                         <manifest>
-                            <mainClass>jlu.evyde.HC</mainClass>
+                            <mainClass>jlu.evyde.HuffmanLoader</mainClass>
                         </manifest>
                     </archive>
                     <!--不能改jar-with-dependencies-->

@@ -155,12 +155,12 @@ public class Huffman {
         return frequency.poll();
     }
 
-    private List<Node> walkTrie(Node node, List<Node> list, BigInteger hierarchy) {
+    private List<Node> getAllLeafWithActualAppearTimes(Node node, List<Node> list, BigInteger hierarchy) {
         if (node.isLeaf()) {
             list.add(new Node(node.feature, node.appearTimes.multiply(hierarchy).add(hierarchy), null, null));
         } else {
-            walkTrie(node.left, list, hierarchy.add(new BigInteger("1")));
-            walkTrie(node.right, list, hierarchy.add(new BigInteger("1")));
+            getAllLeafWithActualAppearTimes(node.left, list, hierarchy.add(new BigInteger("1")));
+            getAllLeafWithActualAppearTimes(node.right, list, hierarchy.add(new BigInteger("1")));
         }
         return list;
     }
@@ -186,6 +186,7 @@ public class Huffman {
 
     private void expand(Header header, BitsIn in, BitsOut out) {
         println(header.toString());
+        ProgressBarWrapper pb = new ProgressBarWrapper("Expanding.", header.getSourceLength(), detail);
         HashMap<Bits, Bits> codeMap = new HashMap<>();
         Node head = readTrie(header, in);
         if (head.isLeaf()) {
@@ -200,10 +201,15 @@ public class Huffman {
                 b.expand(in.read(1));
             }
             out.write(codeMap.get(b));
+            pb.stepBy(header.getType());
         }
+        pb.refresh();
         if (new Bits(out.getCRC32Code().getValue(), 32).equals(new Bits(header.getCRC32Code(), 32))) {
+            pb.setExtraMessage("CRC32 equals.");
+            pb.refresh();
             println("Success!!!!!!");
         }
+        pb.close();
         out.flush();
         out.close();
     }
@@ -260,7 +266,7 @@ public class Huffman {
 
                     Node parent = buildTrie(tempPQ);
 
-                    List<Node> tempList = walkTrie(parent, new ArrayList<>(), new BigInteger("1"));
+                    List<Node> tempList = getAllLeafWithActualAppearTimes(parent, new ArrayList<>(), new BigInteger("1"));
 
                     for (Node n : tempList) {
                         sum = sum.add(n.appearTimes.add(new BigInteger(String.valueOf(i))));
@@ -271,8 +277,10 @@ public class Huffman {
                     autoDetectType.add(nowBitsLength);
                     pbts.step();
                     pbts.setExtraMessage("Estimate will be " + sum + " bits.");
+                    pbts.refresh();
                 } catch (Error e) {
                     pbts.setExtraMessage("Error detected, try next.");
+                    pbts.step(8 - (long) (Math.log(i) / Math.log(2)));
                     pbts.refresh();
                     in.softReset();
                     if (autoDetectType.peek() != null && autoDetectType.peek().key == i) {
