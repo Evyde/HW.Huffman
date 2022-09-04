@@ -53,7 +53,7 @@ public class HuffmanLoader {
                 optionDashTOn = false;
                 try {
                     type = Integer.parseInt(a);
-                    if (type <= 0 || type % 2 != 0 || (type % 8 != 0 || 8 % type != 0) || type > 128) {
+                    if (type <= 0 || type % 2 != 0 || (type % 8 != 0 && 8 % type != 0) || type > 128) {
                         throw new NumberFormatException();
                     }
                     continue;

@@ -47,6 +47,9 @@ public class BitsOut {
     }
 
     private void writeBit(boolean b) {
+        if (isReachWriteLimit()) {
+            return;
+        }
         buffer <<= 1;
         if (b) {
             buffer |= 1;
@@ -58,16 +61,6 @@ public class BitsOut {
     }
 
     private void writeByte(byte b) {
-        try {
-            // empty buffer just write it
-            if (this.pointer == 0) {
-                this.stream.write(b);
-                return;
-            }
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
         // write signal bit 8 times
         for (int i = 0; i < 8; i++) {
             this.writeBit((b >>> (8 - i - 1) & 1) == 1);
@@ -92,6 +85,7 @@ public class BitsOut {
         this.alreadyWrite = this.alreadyWrite.add(new BigInteger("8"));
         this.pointer = 0;
         this.buffer = 0;
+        this.flush();
     }
 
     public void write(byte b) {
@@ -127,7 +121,6 @@ public class BitsOut {
     }
 
     public void flush() {
-        this.clearBuffer();
         try {
             this.stream.flush();
         } catch (IOException e) {
@@ -136,6 +129,7 @@ public class BitsOut {
     }
 
     public void close() {
+        this.clearBuffer();
         flush();
         try {
             this.stream.close();

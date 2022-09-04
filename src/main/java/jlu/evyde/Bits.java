@@ -136,10 +136,18 @@ public class Bits implements Comparable<Bits> {
 
     @Override
     public int hashCode() {
-        return this.bits.hashCode();
+        return this.toString().hashCode();
     }
 
     private static boolean isEqual(Bits me, Bits other) {
+        if (other.getLength() != me.getLength()) {
+            return false;
+        } else {
+            return me.toString().equals(other.toString());
+        }
+    }
+
+    private static boolean isLooseEqual(Bits me, Bits other) {
         boolean isEqual;
         // expand with 0 in shorter thing
         if ((other.getLength() != me.getLength())) {

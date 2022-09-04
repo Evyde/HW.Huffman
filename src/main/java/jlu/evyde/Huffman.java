@@ -169,7 +169,7 @@ public class Huffman {
         int sum = 0;
         if (parent == null) {
             return sum;
-        }else if (!parent.isLeaf()) {
+        } else if (!parent.isLeaf()) {
             sum += (generateCode(map, parent.left, nowBits + '0', isRead));
             sum += (generateCode(map, parent.right, nowBits + '1', isRead));
         } else {
@@ -195,7 +195,7 @@ public class Huffman {
             generateCode(codeMap, head, "", true);
         }
         out.setWriteLimit(new BigInteger(header.getSourceLength().toString(), 2));
-        while (!in.isEOF() && !out.isReachWriteLimit()) {
+        while (!in.isEOF()) {
             Bits b = in.read(1);
             while (!codeMap.containsKey(b)) {
                 b.expand(in.read(1));
@@ -203,12 +203,16 @@ public class Huffman {
             out.write(codeMap.get(b));
             pb.stepBy(header.getType());
         }
+        pb.maxHint(new BigInteger(header.getSourceLength().toString(), 2).longValue());
+        pb.step(new BigInteger(header.getSourceLength().toString(), 2).longValue());
         pb.refresh();
+
         if (new Bits(out.getCRC32Code().getValue(), 32).equals(new Bits(header.getCRC32Code(), 32))) {
             pb.setExtraMessage("CRC32 equals.");
             pb.refresh();
             println("Success!!!!!!");
         }
+
         pb.close();
         out.flush();
         out.close();
@@ -386,9 +390,12 @@ public class Huffman {
         ProgressBarWrapper pb;
         if (in.isCRC32Generated()) {
             pb = new ProgressBarWrapper("Getting frequency", in.getContentLength(), detail);
+            in.softReset();
         } else {
             pb = new ProgressBarWrapper("Getting frequency", -1, detail);
+            in.hardReset();
         }
+
         while (!in.isEOF()) {
             Bits tempByte = in.read(type);
             pb.stepBy(type);

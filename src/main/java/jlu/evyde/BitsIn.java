@@ -128,7 +128,9 @@ public class BitsIn {
             buffer = this.stream.read();
             if (buffer == EOF) {
                 buffer = 0;
+                this.pointer = 8;
                 isEOF = true;
+                isCRC32Generated = true;
             } else {
                 this.tempContentLength = this.tempContentLength.add(new BigInteger("8"));
                 if (this.tempContentLength.compareTo(totalContentLength) >= 0) {
@@ -170,7 +172,6 @@ public class BitsIn {
             this.pointer = 8;
             isEOF = false;
             this.tempContentLength = new BigInteger("0");
-            this.isCRC32Generated = true;
             fillBuffer();
         } catch (IOException e) {
             e.printStackTrace();
