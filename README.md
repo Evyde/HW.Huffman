@@ -1,4 +1,5 @@
 # Huffman Compressor
+[![wakatime](https://wakatime.com/badge/user/6432fad2-333c-4348-a32d-033b64e56426/project/60b88262-9ed7-49f9-bf37-f62f49b86c01.svg)](https://wakatime.com/badge/user/6432fad2-333c-4348-a32d-033b64e56426/project/60b88262-9ed7-49f9-bf37-f62f49b86c01)
 
 哈夫曼压及等长编码解/压缩器，是JLU的数据结构作业。
 
