@@ -3,7 +3,7 @@ package jlu.evyde;
 import java.util.*;
 
 public class HuffmanLoader {
-    private static final ResourceBundle rb = ResourceBundle.getBundle("ManPage", Locale.US);
+    private static final ResourceBundle rb = ResourceBundle.getBundle("HuffmanManPage", Locale.getDefault());
 
     static final Map<String, String> options = new HashMap<>();
 
@@ -19,12 +19,13 @@ public class HuffmanLoader {
     private static void printHelpMessage() {
         System.out.println(rb.getString("DESCRIPTION"));
         System.out.println(rb.getString("USAGE"));
-        System.out.println("java -jar huffman.jar [-I-O-v-h] [-t] [Type] [Input File] [Output File]");
+        System.out.println("java -jar zip.jar huffman [-I-O-v-h] [-t] [Type] [Input File] [Output File]");
         System.out.println(options.get("OptionI") + "\t\t" + rb.getString("DASH_I"));
         System.out.println(options.get("OptionO") + "\t\t" + rb.getString("DASH_O"));
         System.out.println(options.get("OptionV") + "\t\t" + rb.getString("DASH_V"));
         System.out.println(options.get("OptionH") + "/" + options.get("OptionHelp") + "\t" + rb.getString(
                 "DASH_H"));
+        System.out.println(options.get("OptionT") + "\t\t" + rb.getString("DASH_T"));
     }
 
     public static void main(String[] args) {

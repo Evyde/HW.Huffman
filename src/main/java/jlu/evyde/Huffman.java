@@ -5,6 +5,10 @@ import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.*;
 
+/**
+ * This class's thoughts are basically from
+ * <a href="https://algs4.cs.princeton.edu/55compression/Huffman.java.html">Princeton ALGS</a>
+ */
 public class Huffman {
 
     public static class Node implements Comparable<Node> {
@@ -30,102 +34,12 @@ public class Huffman {
         }
     }
 
-    public static class Header {
-        public static final Bits MAGIC_NUMBER = new Bits(0x01711EF3, 32);
-        public static final Bits VERSION = new Bits(1, 8);
-        public static final long LENGTH = 288;
-        private final int type;
-        private final int trieLength;
-        private final Bits sourceLength;
-
-        private final int CRC32Code;
-
-        public Header(BitsIn in) {
-            // valid header, read it
-            this.type = in.readUnsignedByte();
-            int tempTrieLength = in.readInt(16);
-            if (tempTrieLength == 0xFFFF) {
-                this.trieLength = 0xFFFFFFFF;
-            } else {
-                this.trieLength = tempTrieLength;
-            }
-            this.sourceLength = in.read(64);
-            this.CRC32Code = in.readInt();
-            in.read(128);
-            // 8 + 16 + 64 + 32 + 128 = 248 + (32 + 8) = 288
-        }
-
-        public Header(int type, int trieLength, Bits sourceLength, int CRC32Code) {
-            this.type = type;
-            if (trieLength >= 0xFFFF) {
-                this.trieLength = 0xFFFFFFFF;
-            } else {
-                this.trieLength = trieLength;
-            }
-            this.sourceLength = sourceLength;
-            this.CRC32Code = CRC32Code;
-        }
-
-        public static boolean isValidHeader(BitsIn inStream) {
-            // try reading first 32 bits -- an integer
-            // and the version number is supported
-            return (inStream.read(32).equals(MAGIC_NUMBER)) && (inStream.read(8).compareTo(VERSION) <= 0);
-        }
-
-        public Bits getSourceLength() {
-            return sourceLength;
-        }
-
-        public int getTrieLength() {
-            return trieLength;
-        }
-
-        public int getType() {
-            return type;
-        }
-
-        public int getCRC32Code() {
-            return CRC32Code;
-        }
-
-        public List<Bits> dump() {
-            List<Bits> header = new ArrayList<>();
-            header.add(MAGIC_NUMBER);
-            header.add(VERSION);
-            header.add(new Bits(getType(), 8));
-            header.add(new Bits(getTrieLength(), 16));
-
-            header.add(new Bits(getSourceLength().toString(), 64));
-
-            header.add(new Bits(getCRC32Code(), 32));
-
-            header.add(new Bits(0, 128));
-            return header;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder("\tHeader\n====================\n");
-
-            sb.append("Magic number: ").append(new BigInteger(MAGIC_NUMBER.toString(), 2).toString(16)).append(".\n");
-            sb.append("Version: ").append(new BigInteger(VERSION.toString(), 2).longValue()).append(".\n");
-            sb.append("Type: ").append(type).append(".\n");
-            sb.append("Trie length: ").append(trieLength).append(" bits" +
-                    ".\n");
-            sb.append("Source length: ").append(new BigInteger(sourceLength.toString(), 2).toString(10))
-                    .append(" bits.\n");
-            sb.append("CRC32 code: ").append(new BigInteger(new Bits(CRC32Code).toString(), 2).toString(16)).append(".\n");
-            sb.append("====================\n");
-            return sb.toString();
-        }
-    }
-
     private final boolean detail;
 
     private Huffman(BitsIn in, BitsOut out, boolean details, int type) {
         this.detail = details;
 
-        if (Header.isValidHeader(in)) {
+        if (jlu.evyde.Header.isValidHeader(in)) {
             println("Expanding.");
             Header header = new Header(in);
             // read Huffman trie from given file
@@ -197,8 +111,10 @@ public class Huffman {
         out.setWriteLimit(new BigInteger(header.getSourceLength().toString(), 2));
         while (!in.isEOF()) {
             Bits b = in.read(1);
-            while (!codeMap.containsKey(b)) {
+            Bits value = codeMap.get(b);
+            while (value == null) {
                 b.expand(in.read(1));
+                value = codeMap.get(b);
             }
             out.write(codeMap.get(b));
             pb.stepBy(header.getType());
@@ -358,10 +274,10 @@ public class Huffman {
         out.flush();
         out.close();
         println("Complete!\n" + header);
-        long before = Long.parseLong(new BigInteger(header.sourceLength.toString(), 2).toString(10));
+        long before = Long.parseLong(new BigInteger(header.getSourceLength().toString(), 2).toString(10));
         long after = Long.parseLong(out.getAlreadyWrite().toString(10));
         // minus header
-        after -= Header.LENGTH;
+        after -= jlu.evyde.Header.LENGTH;
         println("Compression rate: " + after + "/" + before + " = " + new BigDecimal(after * 100)
                 .setScale(2, RoundingMode.HALF_UP)
                 .divide(new BigDecimal(before)

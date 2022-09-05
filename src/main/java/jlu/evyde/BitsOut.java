@@ -5,7 +5,9 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.zip.CRC32;
 
-
+/**
+ * Adapt from <a href="https://introcs.cs.princeton.edu/java/stdlib/BinaryStdOut.java.html">...</a>
+ */
 public class BitsOut {
     private BufferedOutputStream stream;
 

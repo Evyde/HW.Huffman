@@ -2,10 +2,13 @@ package jlu.evyde;
 
 import java.io.*;
 import java.math.BigInteger;
-import java.nio.channels.Channels;
-import java.util.NoSuchElementException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.CRC32;
 
+/**
+ * Adapt from <a href="https://introcs.cs.princeton.edu/java/stdlib/BinaryStdIn.java.html">...</a>
+ */
 public class BitsIn {
     private InputStream stream;
 
@@ -90,6 +93,14 @@ public class BitsIn {
         return new Bits(readBooleanBits(n));
     }
 
+    public Boolean[] readBooleanBits(long n) {
+        List<Boolean> returnBits = new ArrayList<>();
+        for (long i = 0; i < n; i++) {
+            returnBits.add(readBit());
+        }
+        return returnBits.toArray(new Boolean[]{});
+    }
+
     public boolean[] readBooleanBits(int n) {
         boolean[] returnBits = new boolean[n];
         for (int i = 0; i < n; i++) {
@@ -100,6 +111,10 @@ public class BitsIn {
 
     public Bits read(int n) {
         return readBits(n);
+    }
+
+    public Bits read(long n) {
+        return new Bits(readBooleanBits(n));
     }
 
     public int readInt(int n) {
