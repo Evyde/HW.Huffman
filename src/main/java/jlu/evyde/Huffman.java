@@ -274,16 +274,10 @@ public class Huffman {
         out.flush();
         out.close();
         println("Complete!\n" + header);
-        long before = Long.parseLong(new BigInteger(header.getSourceLength().toString(), 2).toString(10));
-        long after = Long.parseLong(out.getAlreadyWrite().toString(10));
-        // minus header
-        after -= jlu.evyde.Header.LENGTH;
-        println("Compression rate: " + after + "/" + before + " = " + new BigDecimal(after * 100)
-                .setScale(2, RoundingMode.HALF_UP)
-                .divide(new BigDecimal(before)
-                        .setScale(2, RoundingMode.HALF_UP), RoundingMode.HALF_UP)
-                .setScale(2, RoundingMode.HALF_UP)
-                .doubleValue() + "%.");
+        println(Utils.getCompressionRate(
+                Long.parseLong(new BigInteger(in.getContentLength().toString(), 2).toString(10)),
+                Long.parseLong(out.getAlreadyWrite().toString(10))
+        ));
     }
 
     private void writeTrie(Node first, BitsOut out, int type) {

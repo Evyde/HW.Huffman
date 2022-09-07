@@ -1,6 +1,8 @@
 package jlu.evyde;
 
 import java.io.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Map;
 
 public class Utils {
@@ -58,11 +60,11 @@ public class Utils {
         return longToByteArray(i, 8);
     }
 
-    public static class RandomAccessFileStream extends InputStream {
+    public static class RandomAccessFileOutputStream extends InputStream {
 
         private final RandomAccessFile raf;
 
-        public RandomAccessFileStream(RandomAccessFile raf) {
+        public RandomAccessFileOutputStream(RandomAccessFile raf) {
             this.raf = raf;
         }
 
@@ -90,16 +92,27 @@ public class Utils {
     public static void mapVisualize(Map<?, ?> map) {
         StringBuilder sb = new StringBuilder("Map: [");
 
-        for (Object key: map.keySet()) {
+        for (Map.Entry<?, ?> e: map.entrySet()) {
             if (sb.length() % 80 == 0) {
                 sb.append('\n');
             }
-            sb.append(key).append(": ");
-            sb.append(map.get(key));
+            sb.append(e.getKey()).append(": ");
+            sb.append(e.getValue());
             sb.append(", ");
         }
 
         sb.append("]");
         System.out.println(sb);
+    }
+
+    public static String getCompressionRate(long before, long after) {
+        // minus header
+        after -= jlu.evyde.Header.LENGTH;
+        return ("Compression rate: " + after + "/" + before + " = " + new BigDecimal(after * 100)
+                .setScale(2, RoundingMode.HALF_UP)
+                .divide(new BigDecimal(before)
+                        .setScale(2, RoundingMode.HALF_UP), RoundingMode.HALF_UP)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue() + "%.");
     }
 }

@@ -254,11 +254,12 @@ public class Bits implements Comparable<Bits> {
         // expand with 0 in shorter thing
         if (other.getLength() != me.getLength()) {
             Bits shorter = other.getLength() > me.getLength() ? me : other;
+            Bits longer = other.getLength() > me.getLength() ? other : me;
             int diff = Math.abs(other.getLength() - me.getLength());
             for (int i = 0; i < diff; i++) {
                 shorter.bits.addFirst(false);
             }
-            isEqual = me.bits.equals(shorter.bits);
+            isEqual = longer.bits.equals(shorter.bits);
             for (int i = 0; i < diff; i++) {
                 shorter.bits.removeFirst();
             }
@@ -313,7 +314,7 @@ public class Bits implements Comparable<Bits> {
 
     public static Bits model(Bits me, Bits other) {
         assert me != null && other != null;
-        if (other.getLength() > me.getLength()) {
+        if (me.compareTo(other) <= 0) {
             return me;
         }
         // assert if 2^n

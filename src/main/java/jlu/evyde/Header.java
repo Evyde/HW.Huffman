@@ -6,7 +6,7 @@ import java.util.List;
 
 public class Header {
     public static final Bits MAGIC_NUMBER = new Bits(0x01711EF3, 32);
-    public static final Bits VERSION = new Bits(1, 8);
+    public final Bits VERSION;
     public static final long LENGTH = 288;
     private final int type;
     private final int trieLength;
@@ -15,6 +15,9 @@ public class Header {
     private final int CRC32Code;
 
     public Header(BitsIn in) {
+        in.hardReset();
+        in.read(32);
+        this.VERSION = in.read(8);
         // valid header, read it
         this.type = in.readUnsignedByte();
         int tempTrieLength = in.readInt(16);
@@ -29,8 +32,21 @@ public class Header {
         // 8 + 16 + 64 + 32 + 128 = 248 + (32 + 8) = 288
     }
 
+    public Header(Bits version) {
+        this(version, 0, -1, new Bits(-1, 64), 0);
+    }
+
+    public Header(Bits version, Bits sourceLength) {
+        this(version, 0, -1, sourceLength, 0);
+    }
+
     public Header(int type, int trieLength, Bits sourceLength, int CRC32Code) {
+        this(new Bits(1, 8), type, trieLength, sourceLength, CRC32Code);
+    }
+
+    public Header(Bits version, int type, int trieLength, Bits sourceLength, int CRC32Code) {
         this.type = type;
+        VERSION = version;
         if (trieLength >= 0xFFFF) {
             this.trieLength = 0xFFFFFFFF;
         } else {
@@ -41,9 +57,13 @@ public class Header {
     }
 
     public static boolean isValidHeader(BitsIn inStream) {
+        return isValidHeader(inStream, new Bits(1, 8));
+    }
+
+    public static boolean isValidHeader(BitsIn inStream, Bits version) {
         // try reading first 32 bits -- an integer
         // and the version number is supported
-        return (inStream.read(32).equals(MAGIC_NUMBER)) && (inStream.read(8).compareTo(VERSION) <= 0);
+        return (inStream.read(32).equals(MAGIC_NUMBER)) && (inStream.read(8).compareTo(version) == 0);
     }
 
     public Bits getSourceLength() {

@@ -60,15 +60,16 @@ public class BitsTest {
     @Test
     public void model() {
         // TODO: Fix this model error and infinite loop of isLooseEqual()
-        Bits bits64 = new Bits(new BigInteger("64", 10), 8);
-        Bits bitsFileLength = new Bits(new BigInteger("63", 10), 64);
+        Bits bits64 = new Bits(new BigInteger("512000", 10), 64);
+        Bits bitsFileLength = new Bits(new BigInteger("43840", 10), 64);
 
-        assertEquals(8, bits64.getLength());
+        assertEquals(64, bits64.getLength());
         assertEquals(64, bitsFileLength.getLength());
 
         System.out.println(new BigInteger(Bits.model(bitsFileLength, bits64).toString(), 2).toString(10));
 
         assertTrue(Bits.isLooseEqual(Bits.model(bitsFileLength, bits64),
-                (new Bits(new BigInteger("63", 10), 64))));
+                (new Bits(new BigInteger("43840", 10), 64))));
+        assertFalse(Bits.isLooseEqual(Bits.model(bitsFileLength, bits64), new Bits(0, 1)));
     }
 }

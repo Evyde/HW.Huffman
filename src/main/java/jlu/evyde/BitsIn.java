@@ -22,7 +22,7 @@ public class BitsIn {
 
     private int pointer = 0;
 
-    private BigInteger totalContentLength = new BigInteger("0");
+    private BigInteger totalContentLength = new BigInteger("-1");
 
     private BigInteger tempContentLength = new BigInteger("0");
     private boolean isCRC32Generated = false;
@@ -43,7 +43,7 @@ public class BitsIn {
         try {
             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
             this.totalContentLength = new BigInteger(String.valueOf(file.length())).multiply(new BigInteger("8"));
-            this.stream = new Utils.RandomAccessFileStream(randomAccessFile);
+            this.stream = new Utils.RandomAccessFileOutputStream(randomAccessFile);
             fillBuffer();
         } catch (IOException e) {
             e.printStackTrace();
@@ -199,7 +199,7 @@ public class BitsIn {
             buffer = 0;
             this.pointer = 8;
             this.tempContentLength = new BigInteger("0");
-            this.totalContentLength = new BigInteger("0");
+            this.totalContentLength = new BigInteger("-1");
             this.CRC32Code.reset();
             isEOF = false;
             this.isCRC32Generated = false;
