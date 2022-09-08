@@ -20,7 +20,9 @@ public class LZ77 {
     private final Deque<Bits> windowKeyList = new LinkedList<>();
     private final ProgressBarWrapper pb;
     private final Bits ZERO_BITS = new Bits("0", 64);
-    private final Bits FRAGMENT_THRESHOLD = new Bits(new BigInteger("512000", 10), 64);
+    private final BigInteger FRAGMENT_THRESHOLD = new BigInteger("512000", 10);
+    private BigInteger alreadyRead = new BigInteger("0", 10);
+    private BigInteger lastReset = new BigInteger("0", 10);
 
     public static class Position {
         private static Long NOW_START_POSITION = Long.MIN_VALUE;
@@ -102,15 +104,6 @@ public class LZ77 {
 
     private void fillLookAheadBuffer(BitsIn in) {
         while (!in.isEOF() && lookAheadBuffer.size() < LOOK_AHEAD_BUFFER_SIZE) {
-            if (Bits.isLooseEqual(Bits.model(in.getContentLength(), this.FRAGMENT_THRESHOLD), this.ZERO_BITS)) {
-                // reset all variable
-                windowMap.clear();
-                windowKeyList.clear();
-                window.clear();
-                System.gc();
-                Position.NOW_START_POSITION = Long.MIN_VALUE;
-                Position.NEXT_RELATIVE_POSITION = 0L;
-            }
             lookAheadBuffer.addLast(in.read(WORD));
             pb.stepBy(WORD);
         }
@@ -124,6 +117,7 @@ public class LZ77 {
             while (!lookAheadBuffer.isEmpty()) {
                 out.write(new Bits("0", 1));
                 out.write(lookAheadBuffer.removeFirst());
+                this.alreadyRead = this.alreadyRead.add(new BigInteger("1", 10));
             }
             return false;
         }
@@ -182,12 +176,14 @@ public class LZ77 {
                     while (combined.equals(existsCombination)) {
                         slideLength += 1;
                         if (firstPosition + slideLength - 1 > window.size()) {
+                            slideLength -= 1;
                             break;
                         }
                         Bits tempBit;
                         try {
                             tempBit = lookAheadBuffer.removeFirst();
                         } catch (Exception e) {
+                            slideLength -= 1;
                             break;
                         }
                         combined.expand(tempBit);
@@ -259,6 +255,18 @@ public class LZ77 {
             lookAheadBuffer.addFirst(_2);
         }
 
+        this.alreadyRead = this.alreadyRead.add(new BigInteger(String.valueOf(slideLength), 10));
+        if (this.alreadyRead.subtract(this.lastReset).compareTo(this.FRAGMENT_THRESHOLD) >= 0) {
+            // reset all variable
+            windowMap.clear();
+            windowKeyList.clear();
+            window.clear();
+            System.gc();
+            Position.NOW_START_POSITION = Long.MIN_VALUE;
+            Position.NEXT_RELATIVE_POSITION = 0L;
+            this.lastReset = this.alreadyRead;
+        }
+
         return isMatched;
     }
 
@@ -304,10 +312,6 @@ public class LZ77 {
         Deque<Bits> window = new ArrayDeque<>((int) WINDOW_SIZE * 2);
         pb.refresh();
         while (!in.isEOF()) {
-            if (Bits.isLooseEqual(Bits.model(new Bits(out.getAlreadyWrite()), this.FRAGMENT_THRESHOLD), this.ZERO_BITS)) {
-//                System.out.println(out.getAlreadyWrite().toString(10));
-                window.clear();
-            }
             if (in.readBit()) {
                 // slide window thing
 //                System.out.println("!");
@@ -317,37 +321,14 @@ public class LZ77 {
 
                 Bits[] windowArray = window.toArray(new Bits[]{});
 //                System.out.println(start + " + " + offset + " = " + windowArray.length);
-                Deque<Bits> buffer = new LinkedList<>();
+                this.alreadyRead = this.alreadyRead.add(new BigInteger(String.valueOf(offset)));
                 for (int i = 0; i < offset; i++) {
-                    if (start + i < windowArray.length) {
-                        out.write(windowArray[start + i]);
-                        buffer.addLast(windowArray[start + i]);
-                        pb.stepBy(WORD);
-//                        System.out.print((char) new BigInteger(windowArray[start + i].toString(), 2).longValue());
-                    } else {
-                        Bits temp;
-                        try {
-                            temp = buffer.removeFirst();
-                        } catch (Exception e) {
-                            break;
-                        }
-                        out.write(temp);
-                        pb.stepBy(WORD);
-                        window.addLast(temp);
-                        if (window.size() > WINDOW_SIZE) {
-                            window.removeFirst();
-                        }
-
-//                        System.out.print((char) new BigInteger(temp.toString(), 2).longValue());
-                    }
-                }
-                while (!buffer.isEmpty()) {
-                    Bits temp = buffer.removeFirst();
-                    window.addLast(temp);
-                    // System.out.print((char) new BigInteger(temp.toString(), 2).longValue());
+                    out.write(windowArray[start + i]);
+                    window.addLast(windowArray[start + i]);
                     if (window.size() > WINDOW_SIZE) {
                         window.removeFirst();
                     }
+                    pb.stepBy(WORD);
                 }
 //                System.out.println();
             } else {
@@ -357,13 +338,20 @@ public class LZ77 {
 //                System.out.println((char) new BigInteger(normalWord.toString(), 2).longValue());
                 pb.stepBy(WORD);
                 window.addLast(normalWord);
+                this.alreadyRead = this.alreadyRead.add(new BigInteger("1"));
                 if (window.size() > WINDOW_SIZE) {
                     window.removeFirst();
                 }
                 out.write(normalWord);
             }
             out.flush();
+            if (this.alreadyRead.subtract(this.lastReset).compareTo(this.FRAGMENT_THRESHOLD) >= 0) {
+//                System.out.println(out.getAlreadyWrite().toString(10));
+                window.clear();
+                this.lastReset = this.alreadyRead;
+            }
         }
+        pb.refresh();
         pb.close();
         out.close();
     }
