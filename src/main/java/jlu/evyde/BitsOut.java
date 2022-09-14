@@ -112,6 +112,13 @@ public class BitsOut {
         }
     }
 
+    public void write(long b, int n) {
+        while (n > 0) {
+            this.writeBit(((b >>> (n - 1)) & 1) == 1);
+            n--;
+        }
+    }
+
     public void write(Boolean[] bits) {
         for (boolean b: bits) {
             this.write(b);

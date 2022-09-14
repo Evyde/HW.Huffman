@@ -13,14 +13,16 @@ public class LZ77 {
     public static final Bits VERSION = new Bits(2, 8);
     private static final int OFFSET_LEN = 5;
     private static final int POSITION_LEN = 12;
+    private static final long OFFSET_LIMIT = (long) Math.pow(2, OFFSET_LEN);
 
-    private final List<Bits> window = new ArrayList<>((int) WINDOW_SIZE);
+    private List<Bits> window = new ArrayList<>((int) WINDOW_SIZE * 2);
     private final Deque<Bits> lookAheadBuffer = new LinkedList<>();
-    private final Map<Bits, Deque<Position>> windowMap = new HashMap<>();
-    private final Deque<Bits> windowKeyList = new LinkedList<>();
+    private Map<Bits, List<Position>> windowMap = new HashMap<>();
+    private Deque<Bits> windowKeyList = new LinkedList<>();
     private final ProgressBarWrapper pb;
-    private final Bits ZERO_BITS = new Bits("0", 64);
-    private final BigInteger FRAGMENT_THRESHOLD = new BigInteger("512000", 10);
+    private final Bits ZERO_BIT = new Bits("0", 1);
+    private final Bits ONE_BIT = new Bits("1", 1);
+    private final BigInteger FRAGMENT_THRESHOLD = new BigInteger("64000", 10); // 64KB
     private BigInteger alreadyRead = new BigInteger("0", 10);
     private BigInteger lastReset = new BigInteger("0", 10);
 
@@ -115,7 +117,7 @@ public class LZ77 {
         // boundary situation
         if (lookAheadBuffer.size() < 3) {
             while (!lookAheadBuffer.isEmpty()) {
-                out.write(new Bits("0", 1));
+                out.write(ZERO_BIT);
                 out.write(lookAheadBuffer.removeFirst());
                 this.alreadyRead = this.alreadyRead.add(new BigInteger("1", 10));
             }
@@ -131,32 +133,33 @@ public class LZ77 {
         Bits combined = new Bits(_1, _2, _3);
 
         // try to match
-        Deque<Position> tempFirstPositionDeque = windowMap.get(combined);
+        List<Position> tempFirstPositionList = windowMap.get(combined);
         Deque<Bits> comparisonBuffer = new LinkedList<>();
         comparisonBuffer.add(_2);
         comparisonBuffer.add(_3);
         long slideLength = 1L;
 
-        if (tempFirstPositionDeque != null && !tempFirstPositionDeque.isEmpty()) {
-            Position tempFirstPosition = tempFirstPositionDeque.getFirst();
-            if (tempFirstPosition != null && window.size() - tempFirstPosition.get() >= 3) {
+        if (tempFirstPositionList != null && !tempFirstPositionList.isEmpty()) {
+            Position tempFirstPosition = tempFirstPositionList.get(0);
+            if (tempFirstPosition != null && window.size() - tempFirstPosition.get() > 3) {
                 Bits existsCombination = null;
                 Long firstPosition = null;
                 int index = 1;
-                Position[] matchedPositions = null;
+                List<Position> matchedPositions = null;
                 do {
                     if (isMatched) {
                         // prevent hash collision
                         if (matchedPositions == null) {
-                            matchedPositions = tempFirstPositionDeque.toArray(new Position[0]);
+                            matchedPositions = tempFirstPositionList;
                         }
 
-                        if (index >= matchedPositions.length) {
+                        if (index >= matchedPositions.size()) {
                             isMatched = false;
                             break;
                         }
-                        tempFirstPosition = matchedPositions[index++];
-                        if (window.size() - tempFirstPosition.get() < 3) {
+
+                        tempFirstPosition = matchedPositions.get(index++);
+                        if (window.size() - tempFirstPosition.get() <= 3) {
                             isMatched = false;
                             break;
                         }
@@ -171,11 +174,20 @@ public class LZ77 {
                     existsCombination.expand(window.get((int) (firstPosition + 2)));
                 } while (!combined.equals(existsCombination));
 
+                assert window.size() <= WINDOW_SIZE;
+
                 if (isMatched) {
-                    slideLength = slideLength + 2;
-                    while (combined.equals(existsCombination)) {
-                        slideLength += 1;
-                        if (firstPosition + slideLength - 1 > window.size()) {
+                    // at least 3 byte
+                    slideLength = slideLength + 3;
+                    while (true) {
+//                        pb2.setExtraMessage(this.alreadyRead.toString(10));
+//                        pb2.step();
+//                        pb2.refresh();
+                        if (slideLength >= OFFSET_LIMIT) {
+                            slideLength -= 1;
+                            break;
+                        }
+                        if (firstPosition + slideLength - 1 >= window.size()) {
                             slideLength -= 1;
                             break;
                         }
@@ -188,23 +200,33 @@ public class LZ77 {
                         }
                         combined.expand(tempBit);
                         comparisonBuffer.addLast(tempBit);
-                        existsCombination.expand(window.get((int) (firstPosition + slideLength - 2)));
+                        existsCombination.expand(window.get((int) (firstPosition + slideLength - 1)));
+                        if (combined.equals(existsCombination)) {
+                            slideLength += 1;
+                        } else {
+                            slideLength -= 1;
+                            break;
+                        }
                     }
                     // Deal with this slideLength stuff.
-                    slideLength -= 1;
-                    // Write start position and offset in out
-                    out.write(new Bits("1", 1));
-                    out.write(new Bits(new BigInteger(String.valueOf(firstPosition), 10), POSITION_LEN));
-                    out.write(new Bits(new BigInteger(String.valueOf(slideLength), 10), OFFSET_LEN));
+
+                    if (slideLength < 3) {
+                        isMatched = false;
+                        slideLength = 1L;
+                    } else {
+                        assert firstPosition + slideLength < WINDOW_SIZE;
+                        // Write start position and offset in out
+                        out.write(ONE_BIT);
+                        out.write(firstPosition, POSITION_LEN);
+                        out.write(slideLength, OFFSET_LEN);
+                    }
                 }
-            } else {
-                // not matched, just write one
-                out.write(new Bits("0", 1));
-                out.write(_1);
             }
-        } else {
+        }
+
+        if (!isMatched) {
             // not matched, just write one
-            out.write(new Bits("0", 1));
+            out.write(ZERO_BIT);
             out.write(_1);
         }
         out.flush();
@@ -213,17 +235,17 @@ public class LZ77 {
         while (!comparisonBuffer.isEmpty()) {
             lookAheadBuffer.addFirst(comparisonBuffer.removeLast());
         }
-        lookAheadBuffer.addFirst(_1);
 
+        lookAheadBuffer.addFirst(_1);
         // slide window and make new hashes
         // Update hashes.
         for (long i = 0L; i < slideLength; i++) {
             _1 = lookAheadBuffer.removeFirst();
             window.add(_1);
-            if (Position.NEXT_RELATIVE_POSITION >= WINDOW_SIZE) {
+            if (window.size() >= WINDOW_SIZE) {
                 Bits key = windowKeyList.removeFirst();
                 if (windowMap.get(key) != null && !windowMap.get(key).isEmpty()) {
-                    windowMap.get(key).removeFirst();
+                    windowMap.get(key).remove(0);
                 } else {
                     // seems impossible
                     windowMap.remove(key);
@@ -233,34 +255,35 @@ public class LZ77 {
                 Position.NEXT_RELATIVE_POSITION = WINDOW_SIZE;
             }
             // make hashes
-            if (lookAheadBuffer.size() < 3) {
+            if (lookAheadBuffer.size() < 2) {
                 // no new hashes, fill the look ahead buffer
                 fillLookAheadBuffer(in);
-                if (lookAheadBuffer.size() < 3) {
+                if (lookAheadBuffer.size() < 2) {
                     return isMatched;
                 }
             }
             _2 = lookAheadBuffer.removeFirst();
-            _3 = lookAheadBuffer.removeFirst();
+            _3 = lookAheadBuffer.getFirst();
             Bits newKey = new Bits(_1, _2, _3);
             if (windowMap.get(newKey) == null) {
-                Deque<Position> tempDeque = new LinkedList<>();
+                List<Position> tempDeque = new ArrayList<>((int) WINDOW_SIZE);
                 tempDeque.add(new Position());
                 windowMap.put(newKey, tempDeque);
             } else {
-                windowMap.get(newKey).addLast(new Position());
+                windowMap.get(newKey).add(new Position());
             }
             windowKeyList.addLast(newKey);
-            lookAheadBuffer.addFirst(_3);
             lookAheadBuffer.addFirst(_2);
         }
 
         this.alreadyRead = this.alreadyRead.add(new BigInteger(String.valueOf(slideLength), 10));
         if (this.alreadyRead.subtract(this.lastReset).compareTo(this.FRAGMENT_THRESHOLD) >= 0) {
             // reset all variable
-            windowMap.clear();
-            windowKeyList.clear();
-            window.clear();
+            pb.setExtraMessage(this.alreadyRead.toString(10));
+            pb.refresh();
+            windowMap = new HashMap<>();
+            windowKeyList = new LinkedList<>();
+            window = new ArrayList<>((int) WINDOW_SIZE * 2);
             System.gc();
             Position.NOW_START_POSITION = Long.MIN_VALUE;
             Position.NEXT_RELATIVE_POSITION = 0L;
@@ -289,7 +312,7 @@ public class LZ77 {
             System.gc();
             if (in.isEOF()) {
                 while (!lookAheadBuffer.isEmpty()) {
-                    out.write(new Bits("0", 1));
+                    out.write(ZERO_BIT);
                     out.write(lookAheadBuffer.removeFirst());
                 }
             }
@@ -309,7 +332,8 @@ public class LZ77 {
     private void expand(Header header, BitsIn in, BitsOut out) {
         println(header.toString());
         out.setWriteLimit(new BigInteger(header.getSourceLength().toString(), 2));
-        Deque<Bits> window = new ArrayDeque<>((int) WINDOW_SIZE * 2);
+        // Deque<Bits> window = new ArrayDeque<>((int) WINDOW_SIZE * 2);
+        window = new ArrayList<>((int) WINDOW_SIZE * 2);
         pb.refresh();
         while (!in.isEOF()) {
             if (in.readBit()) {
@@ -319,16 +343,23 @@ public class LZ77 {
                 int start = in.readInt(POSITION_LEN);
                 int offset = in.readInt(OFFSET_LEN);
 
-                Bits[] windowArray = window.toArray(new Bits[]{});
+                //System.out.println(this.alreadyRead.toString() + " : " + offset);
+
+                List<Bits> buffer = new ArrayList<>((int) WINDOW_SIZE);
 //                System.out.println(start + " + " + offset + " = " + windowArray.length);
                 this.alreadyRead = this.alreadyRead.add(new BigInteger(String.valueOf(offset)));
                 for (int i = 0; i < offset; i++) {
-                    out.write(windowArray[start + i]);
-                    window.addLast(windowArray[start + i]);
-                    if (window.size() > WINDOW_SIZE) {
-                        window.removeFirst();
-                    }
+                    //mif (start + i < windowArray.length) {
+                    Bits element = window.get(start + i);
+                    out.write(element);
+                    buffer.add(element);
                     pb.stepBy(WORD);
+                }
+                while (!buffer.isEmpty()) {
+                    window.add(buffer.remove(0));
+                    if (window.size() >= WINDOW_SIZE) {
+                        window.remove(0);
+                    }
                 }
 //                System.out.println();
             } else {
@@ -337,17 +368,17 @@ public class LZ77 {
 //                System.out.print(normalWord + ": ");
 //                System.out.println((char) new BigInteger(normalWord.toString(), 2).longValue());
                 pb.stepBy(WORD);
-                window.addLast(normalWord);
+                window.add(normalWord);
                 this.alreadyRead = this.alreadyRead.add(new BigInteger("1"));
-                if (window.size() > WINDOW_SIZE) {
-                    window.removeFirst();
+                if (window.size() >= WINDOW_SIZE) {
+                    window.remove(0);
                 }
                 out.write(normalWord);
             }
             out.flush();
             if (this.alreadyRead.subtract(this.lastReset).compareTo(this.FRAGMENT_THRESHOLD) >= 0) {
 //                System.out.println(out.getAlreadyWrite().toString(10));
-                window.clear();
+                window = new ArrayList<>((int) WINDOW_SIZE * 2);
                 this.lastReset = this.alreadyRead;
             }
         }
